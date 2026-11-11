@@ -1,0 +1,69 @@
+{
+  "network": "arc-testnet",
+  "chainId": 5042002,
+  "deployer": "0x43aBbA38cCfbfa7D0044104681542347dfCB34F7",
+  "orders": "0x259d5810aadfde23ac193dce84e6462025cea02c",
+  "ordersDeployTx": "0xe4502544be333a434ce839a274e24df077c49259a9872da0de6d38c2bddb3750",
+  "router": "0x6812943fc8cf6acf9a098cbabb2277112d77a93f",
+  "usdcFeed": "0x956f192a631cb9033d50eb2e1ffc02a200eb0dad",
+  "assets": [
+    {
+      "symbol": "tBTC",
+      "name": "Test Bitcoin",
+      "decimals": 8,
+      "address": "0x661bf226688f011115a84f5a1243ca6b467c8dfe",
+      "feed": "0xb2438180ef5d3973fa52ef29b1f21c74242f0807",
+      "faucetAmount": "1",
+      "referenceProduct": "BTC-USD",
+      "initialPrice": 73495.37
+    },
+    {
+      "symbol": "tETH",
+      "name": "Test Ether",
+      "decimals": 18,
+      "address": "0x4e15db0f6872c3c54df4ebf87528b582746e020b",
+      "feed": "0x37ae971a73452f1239754e0254ddf6db5b955ea3",
+      "faucetAmount": "10",
+      "referenceProduct": "ETH-USD",
+      "initialPrice": 2053.49
+    },
+    {
+      "symbol": "tSOL",
+      "name": "Test Solana",
+      "decimals": 9,
+      "address": "0xabb307aec3de90ae803f4e8d28f0d5c62f3ff4f2",
+      "feed": "0xbc924588fefedd806996f83a3611999a6c4e436b",
+      "faucetAmount": "100",
+      "referenceProduct": "SOL-USD",
+      "initialPrice": 83.75
+    }
+  ],
+  "queuedConfig": [
+    {
+      "label": "USDC feed",
+      "changeId": "0xd3b43db1ec17bac4e08b576a31d4d00eec17e8225ba5760c3a731470e46ce200",
+      "eta": 1794413342
+    },
+    {
+      "label": "tBTC feed",
+      "changeId": "0x2fbc8cf7b9b0c06daed1d46dc4fbaf7b13dce29353f3b7bd95af980dd1c3dc1a",
+      "eta": 1794413364
+    },
+    {
+      "label": "tETH feed",
+      "changeId": "0xd302378de939c1f968e75c673a9ceb85c4c60a8d474c3b9d5f3e59aee9d4d689",
+      "eta": 1794413385
+    },
+    {
+      "label": "tSOL feed",
+      "changeId": "0x85b4efd0b6485486d8750f3a5d015b08e2807bfc2bd71baf165133ab6818086f",
+      "eta": 1794413406
+    },
+    {
+      "label": "swap router",
+      "changeId": "0x939d39656e5a7c301f36a12317335de62c6165938194103059881b01f2233534",
+      "eta": 1794413411
+    }
+  ],
+  "deployedAt": "2026-11-11T15:10:18.933Z"
+}

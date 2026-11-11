@@ -1,0 +1,113 @@
+import { useState } from 'react'
+import { useAccount } from 'wagmi'
+import type { NetworkConfig, TokenInfo } from '@/trading/networks'
+import type { OracleState } from '@/trading/hooks'
+import { useBackendHealth } from '@/trading/hooks'
+import { useSettings } from '@/trading/settings'
+import { Side } from '@/trading/types'
+import { Notice, Panel, Segmented } from './ui'
+import { ConditionalForm, type ConditionalKind } from './ConditionalForm'
+import { DcaForm } from './DcaForm'
+import { MarketForm } from './MarketForm'
+import type { OkOracle, TradeCtx } from './TradeShared'
+
+type Kind = 'market' | ConditionalKind | 'dca'
+
+const KINDS: { id: Kind; label: string; sellOnly?: boolean; buyOnly?: boolean }[] = [
+  { id: 'market', label: 'Market' },
+  { id: 'limit', label: 'Limit' },
+  { id: 'stop_loss', label: 'Stop-loss', sellOnly: true },
+  { id: 'take_profit', label: 'Take-profit', sellOnly: true },
+  { id: 'stop_limit', label: 'Stop-limit', sellOnly: true },
+  { id: 'trailing', label: 'Trailing stop', sellOnly: true },
+  { id: 'oco', label: 'OCO', sellOnly: true },
+  { id: 'dca', label: 'DCA', buyOnly: true },
+]
+
+export function TradePanel({ network, base, oracle }: { network: NetworkConfig; base: TokenInfo | undefined; oracle: OracleState | undefined }) {
+  const { address } = useAccount()
+  const { slippageBps, expiryDays } = useSettings()
+  const health = useBackendHealth()
+  const [pickedSide, setSide] = useState<number>(Side.BUY)
+  const [kind, setKind] = useState<Kind>('market')
+  const current = KINDS.find((k) => k.id === kind)!
+  // The order type can force a side (stops are sell-only, DCA is buy-only).
+  const side = current.sellOnly ? Side.SELL : current.buyOnly ? Side.BUY : pickedSide
+
+  const ctxOracle: OkOracle | undefined = oracle?.status === 'ok' ? oracle : undefined
+  const ctx: TradeCtx | null = base ? { network, base, side, oracle: ctxOracle, address, slippageBps, expiryDays } : null
+
+  // Why conditional orders can't be placed right now, if anything.
+  let blocker: { title: string; body: string } | null = null
+  if (kind !== 'market') {
+    if (!network.ordersAddress) {
+      blocker = { title: 'Order contract not configured', body: `Set VITE_ORDERS_ADDRESS_${network.key === 'arc' ? 'ARC_MAINNET' : 'ARC_TESTNET'} in .env after deploying ArcTradeOrders.` }
+    } else if (oracle?.status === 'no-feed') {
+      blocker = {
+        title: `No oracle feed for ${base?.symbol ?? 'this token'}`,
+        body: network.oracle.supported
+          ? 'The contract owner has not configured a Chainlink feed for this token yet. Orders need a validated price, so they are disabled.'
+          : network.oracle.reason + ' Conditional orders need a validated onchain price, so this token cannot be traded here.',
+      }
+    } else if (oracle?.status === 'unavailable') {
+      blocker = { title: 'Oracle price unavailable', body: oracle.message }
+    }
+  }
+
+  return (
+    <Panel className="p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="font-display text-sm font-semibold">Trade</h2>
+        <Segmented
+          value={side}
+          onChange={setSide}
+          tone={(v) => (v === Side.BUY ? 'text-up' : 'text-down')}
+          options={[
+            { id: Side.BUY, label: 'Buy', disabled: current.sellOnly },
+            { id: Side.SELL, label: 'Sell', disabled: current.buyOnly },
+          ]}
+        />
+      </div>
+
+      <div className="thin-scroll -mx-1 mb-3 flex gap-1 overflow-x-auto px-1 pb-1" role="tablist" aria-label="Order type">
+        {KINDS.map((k) => (
+          <button
+            key={k.id}
+            role="tab"
+            aria-selected={k.id === kind}
+            onClick={() => setKind(k.id)}
+            className={`min-h-[32px] whitespace-nowrap rounded-md border px-2.5 text-xs transition ${k.id === kind ? 'border-accent/60 bg-raised text-ink' : 'border-transparent text-mute hover:text-ink'}`}
+          >
+            {k.label}
+          </button>
+        ))}
+      </div>
+
+      {!ctx ? (
+        <Notice tone="warn" title="No tradable tokens configured on this network">
+          {network.key === 'arc'
+            ? 'Arc mainnet tokens and their oracle feeds are not configured yet. Add them to src/trading/networks.ts and on the contract after you review the mainnet setup.'
+            : 'Select a token.'}
+        </Notice>
+      ) : blocker ? (
+        <Notice tone="warn" title={blocker.title}>
+          {blocker.body}
+        </Notice>
+      ) : kind === 'market' ? (
+        <MarketForm ctx={ctx} />
+      ) : kind === 'dca' ? (
+        <DcaForm ctx={ctx} />
+      ) : (
+        <ConditionalForm key={`${kind}-${side}-${base?.address}`} ctx={ctx} kind={kind} />
+      )}
+
+      {kind !== 'market' && !blocker && (
+        <div className="mt-3">
+          <Notice>
+            Orders execute when a keeper submits them. {health.data?.keeper.running ? 'The built-in keeper is running.' : 'The built-in keeper is not running; any third party can run one.'}
+          </Notice>
+        </div>
+      )}
+    </Panel>
+  )
+}

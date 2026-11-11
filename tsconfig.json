@@ -1,0 +1,40 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "incremental": true,
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "types": ["node"],
+    "strict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
+    "paths": {
+      "@/*": ["./src/*"],
+      "viem/_types/*": ["./node_modules/viem/_types/*"],
+      "/home/runner/_work/stablecoin-kits-private/stablecoin-kits-private/node_modules/viem/_types/accounts/index.d.ts": [
+        "./node_modules/viem/_types/accounts/index.d.ts"
+      ],
+      "/home/runner/_work/stablecoin-kits-private/stablecoin-kits-private/node_modules/zod/dist/types/index.d.ts": [
+        "./node_modules/@circle-fin/app-kit/node_modules/zod/dist/types/index.d.ts",
+        "./node_modules/zod/dist/types/index.d.ts"
+      ]
+    }
+  },
+  "include": ["src", "scripts"],
+  // compass-deploy.ts imports @circlefin/compass-chains, which only exists inside Arc Studio's
+  // environment and is not an installable dependency here. It is run there, not type-checked here.
+  "exclude": ["scripts/compass-deploy.ts"]
+}
+
