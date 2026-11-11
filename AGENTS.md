@@ -6,14 +6,14 @@ Project memory for future agents.
 
 ## What This App Does
 
-Non-custodial trading terminal on Arc: 0x market swaps, escrowed conditional orders and DCA via `ArcTradeOrders`, portfolio, and a Prompt Station placeholder (UI only, no LLM).
+Non-custodial trading terminal on Arc: market swaps through a quote gateway (0x, KyberSwap; test routers on testnet), escrowed conditional orders and DCA via `ArcTradeOrders`, portfolio, and a Prompt Station placeholder (UI only, no LLM).
 
 ## Tech Stack
 
 - Frontend: React 18, Vite, TypeScript, Tailwind (class dark mode, CSS variable tokens in `src/index.css`)
 - Web3: wagmi v2, viem, ConnectKit
-- Contracts: Solidity + Foundry in `contracts/`, tests in `contracts/test/` (169 tests)
-- Backend: `server/` (Bun). `bun run server`. Vite proxies `/api` to :3001
+- Contracts: Solidity + Foundry in `contracts/`, tests in `contracts/test/` (175 tests, run with Foundry v1.7.1)
+- Backend: `server/` (Bun). `bun run server`. Vite proxies `/api` to :3001. Quote gateway in `server/gateway/`, event indexer in `server/indexer/` (SQLite or Postgres via Bun SQL)
 - Chain: Arc Testnet (5042002) default; Arc mainnet (5042) supported by config
 
 ## Deployed contracts
@@ -23,7 +23,10 @@ Non-custodial trading terminal on Arc: 0x market swaps, escrowed conditional ord
 
 ## Verified Arc facts (researched 2026-11-11)
 
-- 0x Swap API supports Arc mainnet only (not testnet). Needs `ZEROEX_API_KEY` on the backend.
+- 0x Swap API supports Arc mainnet only (not testnet). Needs `ZEROEX_API_KEY` on the backend. KyberSwap (`aggregator-api.kyberswap.com/arc`, keyless) is live on Arc mainnet (verified 2026-11-12); its router is `0x6131B5fae19EA4f9D964eAc0408E4408b66337b5`. Neither exists on Arc Testnet, so testnet swaps use the test routers.
+- Arc emits a `Transfer` log for the native gas fee from `0xfffffffffffffffffffffffffffffffffffffffe`; ignore it when deriving swaps from receipts.
+- Stock anvil cannot execute Arc USDC transfers (native precompile); a mainnet fork needs Arc's Foundry fork.
+- Foundry v1.7.1 is at `~/.foundry-v1.7.1` on the dev machine, bun at `~/.bun/bin` (the PATH `bun` shim is broken).
 - Chainlink Data Feeds exist on Arc mainnet only; feed list in the chainlink skill reference. Heartbeat 24h, call `decimals()`.
 - Gelato Web3 Functions shut down 2026-03-31. Chainlink Automation: no Arc evidence. Execution is permissionless keepers (`server/keeper.ts`).
 - USDC is the gas token; show one USDC balance from the 6-decimal ERC-20 view.
@@ -38,7 +41,8 @@ Non-custodial trading terminal on Arc: 0x market swaps, escrowed conditional ord
 ## Scaling (off-chain only; contract unchanged)
 
 - Keeper keeps an in-memory open set, batches reads with Multicall3, caps actions per tick, backs off failing items, supports id sharding (`server/keeper.ts`, helpers in `server/scale.ts`).
-- Backend caches/coalesces `/price`, rate limits per client, exposes `/metrics`.
+- Backend caches/coalesces `/price` per pair (not per wallet), rate limits per client (`x-forwarded-for` ignored unless `TRUSTED_PROXY_HOPS`), exposes `/metrics` (operator only, Prometheus format available) and sends webhook alerts.
+- Keeper: gateway quotes, profit gate, explicit nonces, standby role, WebSocket wake (`KEEPER_WS_URL`).
 - Frontend reads use multicall, history logs resume from a stored block, tables paginate.
 - Contract-level scaling ideas (batch execute, paged views) need a new audit; see `docs/scaling.md`.
 - Docs live in `docs/`; keep them in sync when behaviour changes.
@@ -48,8 +52,10 @@ Non-custodial trading terminal on Arc: 0x market swaps, escrowed conditional ord
 - `contracts/ArcTradeOrders.sol` - escrow, oracle checks, orders, DCA
 - `src/trading/` - networks, math, hooks, aggregator adapter, market data, portfolio
 - `src/components/` - Terminal, TradePanel, forms, OrderTabs, Portfolio, PromptStation
-- `server/` - 0x proxy, keeper, automation provider registry
-- `tests/trading.test.ts` - `bun test`
+- `server/` - quote gateway (`gateway/`), keeper (`keeper.ts`, `keeper-core.ts`), indexer (`indexer/`), alerts, automation provider registry
+- `scripts/load-test.ts`, `scripts/fork-mainnet-test.ts` - load test and mainnet-fork test
+- `.env.example` lists every setting; `docs/indexer.md` describes the history API
+- `tests/*.test.ts` - `bun test` (trading, gateway, indexer, backend integration)
 - `ordersAbi.ts` is generated from the Foundry artifact; regenerate after contract changes
 
 ## Share links

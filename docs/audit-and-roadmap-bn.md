@@ -208,3 +208,22 @@ QuoteGateway (backend)
 | টেস্ট | 73 টেস্ট পাস (গেটওয়ে, Kyber fixture, breaker, keeper-core, alerts, prometheus সহ) |
 | লাইভ যাচাই | Gateway `/price` ও `/quote` Arc mainnet এ Kyber দিয়ে কাজ করেছে। Keeper testnet এ চালিয়ে 8 tx পাঠিয়েছে, 0 ব্যর্থ |
 | বাকি | KMS/HSM signing, WebSocket event-driven wake, Sentry, Redis shared cache, taker-বিহীন price cache key, আসল 0x key দিয়ে 0x provider পরীক্ষা, Kyber router কে অন-চেইন contract এ allowlist (owner, timelock) |
+
+---
+
+## ১০. Testnet রিহার্সাল ও Phase 2 স্ট্যাটাস (2026-11-12)
+
+সব কিছু আগে Arc Testnet এ চালিয়ে দেখা হয়েছে; mainnet এ কোনো transaction পাঠানো হয়নি।
+
+| আইটেম | ফলাফল |
+| --- | --- |
+| Foundry | v1.7.1 ইনস্টল করে `forge test`: **175 টেস্ট পাস** (আগে অযাচাইকৃত ছিল) |
+| Testnet গেটওয়ে | দুটি test router (`test-router`, `test-router-b`) গেটওয়ের provider; keeper এখন testnet এও গেটওয়ে দিয়ে quote নেয় |
+| Router B | নতুন TestSwapRouter deploy ও timelock এ queue করা। এটি mainnet এ Kyber/0x router allowlist করার রিহার্সাল |
+| Live e2e (testnet, নতুন keeper) | **11/11 scenario পাস**: limit, stop-loss, take-profit, trailing, OCO, stop-limit, cancel, expiry, DCA, market swap। Keeper এ event wake কাজ করেছে |
+| Price cache | taker ছাড়া cache key: 80 wallet, 800 request = মাত্র 4 upstream lookup (99.5% hit) |
+| Indexer | SQLite/Postgres, `/history`, `/swaps`, `/stats`, `POST /swaps` (chain থেকে যাচাই)। লাইভ testnet এ 53 event index হয়েছে, আসল swap যাচাই ও সংরক্ষিত |
+| লাইভ আবিষ্কার | Arc গ্যাস ফি-র জন্য `0xff..fe` ঠিকানা থেকে `Transfer` log দেয়; এটি বাদ না দিলে swap শনাক্ত হতো না (ঠিক করা হয়েছে) |
+| Integration টেস্ট | spawned backend: x-forwarded-for bypass বন্ধ, `/metrics` সুরক্ষিত, `/health` redacted |
+| Mainnet fork | stock anvil এ Arc USDC transfer চলে না (native precompile)। স্ক্রিপ্ট তৈরি, কিন্তু Arc-এর Foundry fork লাগবে; তাই scenario গুলো চালানো **হয়নি** |
+| বাকি | KMS/HSM signing, Sentry, Redis shared cache, Kyber/0x router mainnet contract এ allowlist (owner, timelock), বাস্তব 0x key পরীক্ষা, contract v2 ও audit, frontend bundle code-splitting (1.68 MB) |
