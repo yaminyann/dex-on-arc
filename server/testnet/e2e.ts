@@ -266,7 +266,7 @@ async function main() {
 
   const failed = results.filter((r) => !r.ok)
   console.log(`\n${results.length - failed.length}/${results.length} scenarios passed`)
-  await Bun.write('/tmp/e2e-results.json', JSON.stringify({ trader: trader.address, results }, null, 2))
+  await Bun.write(`${process.env.TEMP ?? process.env.TMPDIR ?? '/tmp'}/e2e-results.json`, JSON.stringify({ trader: trader.address, results }, null, 2))
   process.exit(failed.length === 0 ? 0 : 1)
 }
 

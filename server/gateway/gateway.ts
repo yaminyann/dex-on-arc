@@ -65,6 +65,11 @@ export class Gateway {
     })
   }
 
+  /** True when at least one configured provider can quote on this chain. */
+  supportsChain(chainId: number): boolean {
+    return this.providers.some((p) => p.configured() && p.supports(chainId))
+  }
+
   get configured(): boolean {
     return this.providers.some((p) => p.configured())
   }
@@ -191,6 +196,24 @@ export class Gateway {
   }
 }
 
+/** Neutral address used for cacheable /price lookups. The real taker only matters for the allowance, which is added afterwards. */
+export const NEUTRAL_TAKER = '0x000000000000000000000000000000000000dEaD'
+
+export type AllowanceRead = (chainId: number, token: string, owner: string, spender: string) => Promise<bigint | null>
+
+/**
+ * Re-targets a cached, taker-less price response at one wallet: sets `issues.allowance` from the
+ * wallet's real allowance for the quoted spender. An unreadable allowance counts as zero, so the UI
+ * asks for an exact approval rather than sending a swap that would revert.
+ */
+export async function withTakerAllowance(res: WireResponse, req: GatewayRequest, read: AllowanceRead): Promise<WireResponse> {
+  const body = res.body as { liquidityAvailable?: boolean; spender?: string | null; sellAmount?: string; issues?: unknown } | undefined
+  if (res.status !== 200 || !body?.liquidityAvailable || !body.spender || !body.sellAmount) return res
+  const actual = (await read(req.chainId, req.sellToken, req.taker, body.spender).catch(() => null)) ?? 0n
+  const insufficient = actual < BigInt(body.sellAmount)
+  return { status: res.status, body: { ...body, issues: { allowance: insufficient ? { spender: body.spender, actual: actual.toString() } : null } } }
+}
+
 export function toWire(kind: QuoteKind, req: GatewayRequest, best: GatewayQuote, ranked: readonly GatewayQuote[], outcomes: readonly ProviderOutcome[]) {
   return {
     liquidityAvailable: true,
@@ -203,6 +226,7 @@ export function toWire(kind: QuoteKind, req: GatewayRequest, best: GatewayQuote,
     route: best.route,
     issues: { allowance: best.allowance ? { spender: best.allowance.spender, actual: best.allowance.actual.toString() } : null },
     totalNetworkFee: best.networkFeeNative === null ? null : best.networkFeeNative.toString(),
+    spender: best.spender ?? best.allowance?.spender ?? null,
     simulation: best.simulation,
     transaction:
       kind === 'quote' && best.transaction

@@ -50,6 +50,7 @@ Since Phase 1 the act step works like this:
 - **Concurrent sends.** All prepared transactions are broadcast back to back with explicit nonces from the chain's pending count and confirmed in parallel. A failed send stops the batch and the next tick re-reads the nonce.
 - **Gas price floor** of 20 gwei (`KEEPER_MIN_GAS_PRICE_GWEI`) so Arc does not silently drop transactions.
 - **Failover.** Run a `KEEPER_ROLE=standby` instance next to your primaries. It watches every item but acts only after an item stayed actionable for the grace period, so it stays idle while primaries are healthy and takes over when they are not. No shared store is needed because every call is permissionless and idempotent.
+- **Event wake.** With `KEEPER_WS_URL` set, `OrderCreated`, `DcaCreated` and `DcaResumed` events end the idle sleep early (rate-limited by `KEEPER_MIN_TICK_MS`). Polling remains the fallback, so a dropped socket costs latency only. Price triggers still depend on polling; there is no oracle-update subscription yet.
 - **Keys** can be mounted as a file (`KEEPER_PRIVATE_KEY_FILE`). KMS or HSM signing is not built.
 
 The keeper reads state from the contract, not from event logs. A restart rebuilds its working set from the chain, so there is no block-0 backfill and no persisted cursor to lose.

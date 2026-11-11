@@ -8,3 +8,7 @@ contracts/out
 contracts/cache
 traces.jsonl
 console.jsonl
+
+# Local indexer database
+data/
+!.env.example

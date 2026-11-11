@@ -66,7 +66,11 @@ The script is idempotent: it prints the seconds remaining for entries that are n
 KEEPER_ENABLED=true KEEPER_PRIVATE_KEY=$TESTNET_DEPLOYER_PRIVATE_KEY bun run server
 ```
 
-On testnet the keeper fills swaps through the test router automatically. Set `KEEPER_USE_TEST_ROUTER=false` to disable that.
+On testnet the keeper fills swaps through the quote gateway, which serves the test routers as providers (`test-router`, `test-router-b`). Limit them with `GATEWAY_PROVIDERS`.
+
+## Second router (rehearsing an extra aggregator)
+
+`server/testnet/deploy-router-b.ts` deploys a second `TestSwapRouter`, queues it as a swap target on the order contract and funds it. After the config delay, `apply-config.ts` allowlists it. This is the testnet rehearsal of what mainnet needs for every additional aggregator router (KyberSwap, 0x): an onchain, timelocked allowlist entry that keepers can then use. Router B pays outputs from its own balance (the test tokens have a single minter, router A), so keep test sizes small.
 
 ## Router liquidity
 

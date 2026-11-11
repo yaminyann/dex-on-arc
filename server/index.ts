@@ -14,7 +14,8 @@
  *   UPSTREAM_BUDGET_PER_MIN  global cap on calls to 0x from this process (default 600)
  */
 import { isApiError, parseQuoteRequest, ZEROEX_SUPPORTED_CHAINS } from './zerox'
-import { gateway } from './gateway/instance'
+import { gateway, readAllowance } from './gateway/instance'
+import { NEUTRAL_TAKER, withTakerAllowance } from './gateway/gateway'
 import { renderPrometheus } from './prometheus'
 import { alerter } from './alerts'
 import { keeperStatus, startKeeper } from './keeper'
@@ -37,6 +38,8 @@ const limits = {
 }
 
 const priceCache = new TtlCache<{ status: number; body: unknown }>(PRICE_TTL_MS, 1000)
+// Per-wallet allowance view of a shared price, cached just as briefly.
+const allowanceCache = new TtlCache<{ status: number; body: unknown }>(PRICE_TTL_MS, 5000)
 
 function json(body: unknown, status = 200, extra: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -98,19 +101,23 @@ const server = Bun.serve({
       if (!originAllowed(req.headers.get('origin'), req.headers.get('referer'), allowedOrigins)) {
         return json({ error: { code: 'ORIGIN_NOT_ALLOWED', message: 'This origin may not use the quote service.' } }, 403)
       }
-      const parsed = parseQuoteRequest(url.searchParams)
+      const parsed = parseQuoteRequest(url.searchParams, (id) => gateway.supportsChain(id))
       if (isApiError(parsed)) return json({ error: { code: parsed.code, message: parsed.message } }, parsed.status)
       try {
         if (url.pathname === '/price') {
-          // Identical requests inside the TTL share one gateway round trip.
-          const cacheKey = [parsed.chainId, parsed.sellToken, parsed.buyToken, parsed.sellAmount, parsed.taker, parsed.slippageBps].join(':').toLowerCase()
+          // The price does not depend on who asks, so the cache key leaves the wallet out and every
+          // user of the same pair and size shares one gateway round trip. The wallet's own allowance is
+          // read separately and added to the response.
+          const cacheKey = [parsed.chainId, parsed.sellToken, parsed.buyToken, parsed.sellAmount, parsed.slippageBps].join(':').toLowerCase()
           let fresh = false
-          const out = await priceCache.get(cacheKey, async () => {
+          const shared = await priceCache.get(cacheKey, async () => {
             fresh = true
-            return gateway.best('price', parsed)
+            return gateway.best('price', { ...parsed, taker: NEUTRAL_TAKER })
           })
           if (fresh) metrics.http.cacheMisses += 1
           else metrics.http.cacheHits += 1
+          const allowanceKey = ['a', parsed.chainId, parsed.taker, parsed.sellToken, (shared.body as { spender?: string })?.spender ?? ''].join(':').toLowerCase()
+          const out = await allowanceCache.get(allowanceKey + ':' + cacheKey, () => withTakerAllowance(shared, parsed, readAllowance))
           return json(out.body, out.status, { 'x-cache': fresh ? 'miss' : 'hit' })
         }
         const out = await gateway.best('quote', parsed)

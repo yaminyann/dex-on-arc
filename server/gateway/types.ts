@@ -28,6 +28,8 @@ export interface GatewayQuote {
   networkFeeNative: bigint | null
   /** Set only when the taker's allowance for `spender` is below the sell amount. */
   allowance: { spender: string; actual: bigint } | null
+  /** Contract that must hold the sell-token allowance, independent of who the taker is. Lets /price be cached per pair instead of per wallet. */
+  spender?: string | null
   /** Present for firm quotes only. */
   transaction?: { to: string; data: string; value: bigint; gas: bigint | null }
   /** Result of an eth_call of the transaction from the taker. Demotes failing quotes in ranking. */

@@ -63,7 +63,13 @@
       "label": "swap router",
       "changeId": "0x939d39656e5a7c301f36a12317335de62c6165938194103059881b01f2233534",
       "eta": 1794413411
+    },
+    {
+      "label": "swap router B",
+      "changeId": "0x7cd63600a7ffe5cfd966e5f5c445d318e534e4f8291c1bf5ce067ea62bbe3ed0",
+      "eta": 1794429556
     }
   ],
-  "deployedAt": "2026-11-11T15:10:18.933Z"
+  "deployedAt": "2026-11-11T15:10:18.933Z",
+  "routerB": "0x5efcfe5aecbf618c149288496289d305edf107bd"
 }

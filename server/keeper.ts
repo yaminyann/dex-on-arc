@@ -17,23 +17,17 @@
  * stuck order never consumes the budget. State is read directly from the contract (no log
  * scanning), so a restart rebuilds the set from the chain and there is no block-0 backfill.
  */
-import { createPublicClient, createWalletClient, encodeFunctionData, erc20Abi, type Address, type Hex, type PublicClient } from 'viem'
+import { createPublicClient, createWalletClient, erc20Abi, webSocket, type Address, type Hex, type PublicClient } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { arc, arcTestnet } from 'viem/chains'
 import { ordersAbi } from '../src/trading/ordersAbi'
 import { getChain } from '../src/onchain-facts'
-import { ZEROEX_SUPPORTED_CHAINS } from './zerox'
 import { gateway } from './gateway/instance'
 import { resolveRpcUrls, transportFor } from './rpc'
 import { alerter } from './alerts'
 import { applyGasFloor, expectedFeeUsdc6, isProfitable, loadKeeperKey, NonceTracker, StandbyGate, type ProfitPolicy } from './keeper-core'
-import harness from '../src/trading/testnet-harness.json'
 import { Backoff, chunk, inShard, mapLimit, metrics } from './scale'
 import { redactSecrets } from './security'
-
-const testRouterAbi = [
-  { type: 'function', name: 'swapExactIn', stateMutability: 'nonpayable', inputs: [{ name: 'tokenIn', type: 'address' }, { name: 'tokenOut', type: 'address' }, { name: 'amountIn', type: 'uint256' }], outputs: [{ type: 'uint256' }] },
-] as const
 
 const OPEN = 0
 const ACTIVE_DCA = 0
@@ -122,8 +116,6 @@ interface Ctx {
   maxActions: number
   quoteConcurrency: number
   quoteToken?: Address
-  /** Testnet only: the test router stands in for 0x, which does not support Arc Testnet. */
-  testRouter?: Address
   orderCursor: bigint
   dcaCursor: bigint
   openOrders: Set<bigint>
@@ -180,7 +172,6 @@ export function startKeeper(): void {
   const shardCount = role === 'standby' ? 1 : envInt('KEEPER_SHARD_COUNT', 1, 1, 256)
   const shardIndex = role === 'standby' ? 0 : envInt('KEEPER_SHARD_INDEX', 0, 0, shardCount - 1)
   const transport = transportFor(resolveRpcUrls(compassChain, facts.rpcUrls))
-  const testRouter = !mainnet && process.env.KEEPER_USE_TEST_ROUTER !== 'false' ? (harness.router as Address) : undefined
   const account = privateKeyToAccount(pk as Hex)
   const ctx: Ctx = {
     publicClient: createPublicClient({ chain, transport }) as PublicClient,
@@ -197,12 +188,11 @@ export function startKeeper(): void {
     retryOrders: new Set(),
     retryDcas: new Set(),
     backoff: new Backoff(),
-    testRouter,
     role,
     standby: new StandbyGate(envInt('KEEPER_STANDBY_GRACE_MS', 90_000, 1000, 3_600_000)),
-    // The test router pays no real fee, so profitability only applies where a real fee exists.
+    // Testnet fees are worth nothing, so profitability only gates mainnet unless set explicitly.
     profit: {
-      require: !testRouter && process.env.KEEPER_REQUIRE_PROFIT !== 'false',
+      require: (process.env.KEEPER_REQUIRE_PROFIT ?? (mainnet ? 'true' : 'false')) !== 'false',
       marginBps: envInt('KEEPER_PROFIT_MARGIN_BPS', 0, 0, 100_000),
       minFeeUsdc6: BigInt(envInt('KEEPER_MIN_FEE_USDC_MICRO', 0, 0, 1_000_000_000)),
     },
@@ -216,13 +206,36 @@ export function startKeeper(): void {
   status.shard = ctx.shard
   status.running = true
   if (role === 'standby') status.notes.push(`Standby: acts on an item only after it stayed actionable for ${envInt('KEEPER_STANDBY_GRACE_MS', 90_000, 1000, 3_600_000)} ms.`)
-  if (ctx.testRouter) {
-    status.notes.push('Testnet: swaps are filled through the test router at the public test-feed price.')
-  } else if (!ZEROEX_SUPPORTED_CHAINS.has(chain.id)) {
+  if (!gateway.supportsChain(chain.id)) {
     status.notes.push('No swap provider supports this chain: only maintenance calls (expire, activate, trail) run, swaps cannot.')
+  } else if (!mainnet) {
+    status.notes.push(`Testnet: swaps are filled through the test routers (${gateway.providers.filter((p) => p.supports(chain.id)).map((p) => p.id).join(', ')}) at the public test-feed price.`)
   }
 
   const interval = envInt('KEEPER_INTERVAL_MS', 15_000, 500, 3_600_000)
+  const minTickGap = envInt('KEEPER_MIN_TICK_MS', 1000, 250, 60_000)
+
+  // Event wake: a new order or DCA plan ends the idle sleep early instead of waiting out the interval.
+  // Polling stays as the fallback, so a dropped socket only costs latency, never correctness.
+  let wakeIdle: (() => void) | null = null
+  const idle = (ms: number) =>
+    new Promise<void>((resolve) => {
+      const done = () => {
+        clearTimeout(timer)
+        wakeIdle = null
+        resolve()
+      }
+      const timer = setTimeout(done, ms)
+      wakeIdle = done
+    })
+  const wsUrl = process.env.KEEPER_WS_URL
+  if (wsUrl) {
+    status.notes.push('Event wake enabled (WebSocket). Polling remains the fallback.')
+    startEventWake(ctx, chain, wsUrl, () => {
+      metrics.keeper.wakeups += 1
+      wakeIdle?.()
+    })
+  }
   const loop = async () => {
     for (;;) {
       const started = Date.now()
@@ -247,7 +260,9 @@ export function startKeeper(): void {
       metrics.keeper.openOrders = ctx.openOrders.size
       metrics.keeper.openDcas = ctx.openDcas.size
       // Sleep the remainder so a slow tick never stacks on the next one.
-      await sleep(Math.max(250, interval - (Date.now() - started)))
+      const elapsed = Date.now() - started
+      if (elapsed < minTickGap) await sleep(minTickGap - elapsed)
+      await idle(Math.max(0, interval - (Date.now() - started)))
     }
   }
   void loop()
@@ -382,7 +397,7 @@ async function tick(ctx: Ctx) {
 
   const jobs: Job[] = acting.maintenance.slice(0, ctx.maxActions).map((m) => ({ fn: m.fn, args: [m.id], key: mKey(m), maintenance: true }))
 
-  const swapsPossible = Boolean(ctx.testRouter) || gateway.providers.some((p) => p.configured() && p.supports(ctx.chainId))
+  const swapsPossible = gateway.supportsChain(ctx.chainId)
   if (swapsPossible && acting.candidates.length > 0) {
     const batch = acting.candidates.slice(0, Math.max(0, ctx.maxActions - jobs.length))
     const allowed = new Map<string, boolean>()
@@ -393,10 +408,6 @@ async function tick(ctx: Ctx) {
     const built = await mapLimit(batch, ctx.quoteConcurrency, async (c): Promise<Job | null> => {
       const key = keyOf(c)
       try {
-        if (ctx.testRouter) {
-          const data = encodeFunctionData({ abi: testRouterAbi, functionName: 'swapExactIn', args: [c.sellToken, c.buyToken, c.sellAmount] })
-          return { fn: c.fn, args: [c.id, ctx.testRouter, data], key, maintenance: false, feeUsdc6: 0n }
-        }
         const { ranked } = await gateway.rank('quote', { chainId: ctx.chainId, sellToken: c.sellToken, buyToken: c.buyToken, sellAmount: c.sellAmount.toString(), taker: address, slippageBps: Math.min(c.slippageBps, 100) }, { simulate: false })
         // Best-ranked quote whose target the contract owner has allowlisted.
         for (const q of ranked) {
@@ -511,4 +522,26 @@ interface Job {
 interface Prepared {
   job: Job
   gas: bigint
+}
+
+/**
+ * Subscribes to order and DCA lifecycle events over WebSocket and calls `onEvent` for each batch.
+ * viem reconnects the socket by itself; errors are logged and never stop the polling loop.
+ */
+function startEventWake(ctx: Ctx, chain: typeof arc | typeof arcTestnet, wsUrl: string, onEvent: () => void): void {
+  try {
+    const client = createPublicClient({ chain, transport: webSocket(wsUrl, { reconnect: true, retryCount: 5 }) })
+    const events = ordersAbi.filter((x) => x.type === 'event' && ['OrderCreated', 'DcaCreated', 'DcaResumed'].includes(x.name))
+    client.watchEvent({
+      address: ctx.address,
+      events: events as never,
+      onLogs: () => onEvent(),
+      onError: (e) => {
+        status.notes = status.notes.filter((n) => !n.startsWith('Event wake error'))
+        status.notes.push(`Event wake error (polling continues): ${redactSecrets(e.message).slice(0, 120)}`)
+      },
+    })
+  } catch (e) {
+    status.notes.push(`Event wake could not start (polling continues): ${e instanceof Error ? redactSecrets(e.message).slice(0, 120) : 'unknown error'}`)
+  }
 }

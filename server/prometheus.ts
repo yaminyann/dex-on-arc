@@ -52,6 +52,7 @@ export function renderPrometheus(s: PromSnapshot): string {
     ['{result="sent"}', k.txSent ?? 0],
     ['{result="failed"}', k.txFailed ?? 0],
   ])
+  metric('arc_keeper_event_wakeups_total', 'counter', 'Idle sleeps ended early by an onchain event.', [['', k.wakeups ?? 0]])
   metric('arc_keeper_standby_waiting', 'gauge', 'Executable items a standby keeper is waiting to take over.', [['', k.standbyWaiting ?? 0]])
   metric('arc_keeper_rpc_multicalls_total', 'counter', 'Batched read requests.', [['', k.rpcMulticalls ?? 0]])
   metric('arc_keeper_balance_usdc', 'gauge', 'Keeper wallet balance in whole USDC (-1 unknown).', [['', k.balanceUsdc ?? -1]])

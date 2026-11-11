@@ -34,7 +34,7 @@ export function zeroExConfigured(): boolean {
 }
 
 /** Validates untrusted query parameters. Returns a request or a structured error. */
-export function parseQuoteRequest(params: URLSearchParams): QuoteRequest | ApiError {
+export function parseQuoteRequest(params: URLSearchParams, chainSupported: (chainId: number) => boolean = (id) => ZEROEX_SUPPORTED_CHAINS.has(id)): QuoteRequest | ApiError {
   const chainId = Number(params.get('chainId'))
   const sellToken = params.get('sellToken') ?? ''
   const buyToken = params.get('buyToken') ?? ''
@@ -43,11 +43,11 @@ export function parseQuoteRequest(params: URLSearchParams): QuoteRequest | ApiEr
   const slippageBps = Number(params.get('slippageBps') ?? '50')
 
   if (!Number.isInteger(chainId)) return { status: 400, code: 'INPUT_INVALID', message: 'chainId must be an integer' }
-  if (!ZEROEX_SUPPORTED_CHAINS.has(chainId)) {
+  if (!chainSupported(chainId)) {
     return {
       status: 400,
       code: 'CHAIN_NOT_SUPPORTED',
-      message: `0x does not support chain ${chainId}. Supported on Arc: mainnet (5042) only.`,
+      message: `No quote provider supports chain ${chainId}.`,
     }
   }
   if (!ADDRESS_RE.test(sellToken) || !ADDRESS_RE.test(buyToken)) {

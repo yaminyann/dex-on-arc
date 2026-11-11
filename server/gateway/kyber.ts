@@ -147,6 +147,7 @@ export function createKyberProvider(opts: KyberOptions = {}): QuoteProvider {
           route: kyberRoute(routeSummary),
           networkFeeNative: gasUnits !== null && gasPrice !== null ? gasUnits * gasPrice : null,
           allowance,
+          spender: routerAddress,
           transaction,
         },
       }

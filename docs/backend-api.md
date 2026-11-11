@@ -80,13 +80,17 @@ Trust rules per provider: the KyberSwap router the API returns must be in `KYBER
 
 Adding a provider: implement `QuoteProvider` (`server/gateway/types.ts`), normalize to `GatewayQuote`, register it in `server/gateway/instance.ts`, add its router to the frontend `swapTargets` and queue it on the orders contract (timelocked) before keepers can use it.
 
+### Testnet providers
+
+Arc Testnet has no real aggregator, so the gateway also serves `test-router` and `test-router-b`, the two deployed `TestSwapRouter` contracts from the harness record. They price at the public test feeds minus 0.10% and exist so that the whole path (gateway ranking, keeper selection among allowlisted targets, execution) can be rehearsed on testnet before mainnet. Limit providers with `GATEWAY_PROVIDERS`.
+
 ## Observability
 
 `GET /metrics` (operator only) returns JSON. `GET /metrics?format=prometheus` (or `Accept: text/plain`) returns Prometheus text with request, cache, keeper action, keeper balance, last-OK-tick age and per-provider `arc_gateway_provider_up` series. Set `ALERT_WEBHOOK_URL` to be notified when the keeper wallet runs low, ticks fail three times in a row, or a quote provider's breaker opens (one message per condition per 15 minutes, plus one on recovery).
 
 ## Caching and coalescing
 
-`/price` responses are cached for `PRICE_CACHE_TTL_MS` (default 4 s) per unique request, and concurrent identical requests share one upstream call. The response header `x-cache` is `hit` or `miss`. `/quote` is never cached because it returns executable calldata. Failed upstream loads are not cached by the loader, but an upstream HTTP error body returned by 0x is cached for the TTL like any response.
+`/price` responses are cached for `PRICE_CACHE_TTL_MS` (default 4 s) per pair, amount and slippage, and concurrent identical requests share one gateway round trip. The cache key leaves the wallet out: the shared lookup uses a neutral taker, and the caller's own allowance for the quoted spender is read separately (an `eth_call`, also cached for the TTL) and added as `issues.allowance`. A load test with 80 wallets and 800 requests produced 4 upstream lookups (99.5% hit ratio). The response header `x-cache` is `hit` or `miss`. `/quote` is never cached because it returns executable calldata. Failed upstream loads are not cached by the loader, but an upstream HTTP error body returned by 0x is cached for the TTL like any response.
 
 ## Rate limiting
 

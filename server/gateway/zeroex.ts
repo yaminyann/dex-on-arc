@@ -31,6 +31,7 @@ export function normalizeZeroEx(status: number, body: unknown): ProviderResult {
     route: b.route ?? [],
     networkFeeNative: b.totalNetworkFee ? BigInt(b.totalNetworkFee) : null,
     allowance: b.issues?.allowance ? { spender: b.issues.allowance.spender, actual: BigInt(b.issues.allowance.actual) } : null,
+    spender: b.issues?.allowance?.spender ?? null,
     transaction: b.transaction
       ? { to: b.transaction.to, data: b.transaction.data, value: BigInt(b.transaction.value ?? '0'), gas: b.transaction.gas ? BigInt(b.transaction.gas) : null }
       : undefined,

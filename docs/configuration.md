@@ -27,7 +27,7 @@ Changing a `VITE_` variable needs a dev-server restart.
 | `ALLOWED_ORIGINS` | none | Comma-separated browser origins allowed to call `/price` and `/quote`. Defense in depth only; non-browser clients can forge headers |
 | `ADMIN_TOKEN` | none | Bearer token for `/metrics` and detailed `/health`. Unset means loopback-only, direct connections. Set it in any deployed environment |
 | `UPSTREAM_BUDGET_PER_MIN` | `600` | Cap on requests this process sends to each quote provider per minute, so many clients cannot drain an API key |
-| `GATEWAY_PROVIDERS` | `0x,kyber` | Comma-separated quote providers to use. `0x` needs `ZEROEX_API_KEY`; `kyber` is keyless |
+| `GATEWAY_PROVIDERS` | `0x,kyber,test-router,test-router-b` | Comma-separated quote providers to use. `0x` needs `ZEROEX_API_KEY`; `kyber` is keyless; the `test-router*` providers answer on Arc Testnet only |
 | `GATEWAY_TIMEOUT_MS` | `4000` | Per-provider time limit; a slower provider is dropped for that request |
 | `GATEWAY_BREAKER_THRESHOLD` / `GATEWAY_BREAKER_COOLDOWN_MS` | `3` / `30000` | Consecutive failures that take a provider out of rotation, and for how long |
 | `GATEWAY_SIMULATE` | on | Set `false` to skip the `eth_call` check of firm quotes (failing quotes are demoted, never trusted) |
@@ -41,7 +41,8 @@ Changing a `VITE_` variable needs a dev-server restart.
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `KEEPER_ENABLED` | off | `true` starts the keeper loop |
-| `KEEPER_USE_TEST_ROUTER` | on (testnet only) | Set to `false` to stop the testnet keeper from filling swaps through the test router |
+| `KEEPER_WS_URL` | none | WebSocket RPC (for example `wss://rpc.testnet.arc.io`). New orders and DCA plans end the idle sleep early; polling stays as the fallback |
+| `KEEPER_MIN_TICK_MS` | `1000` | Minimum gap between ticks, so a burst of events cannot hammer the RPC |
 | `TESTNET_DEPLOYER_PRIVATE_KEY` | none | Throwaway Arc Testnet key used by the harness scripts (`server/testnet/*`). Never a `VITE_` variable, never a key that held real funds |
 | `KEEPER_PRIVATE_KEY` | none | The operator's own funded key. Pays gas, receives the keeper fee. Use a dedicated low-balance key |
 | `KEEPER_NETWORK` | `arc-testnet` | `arc-testnet` or `arc` |

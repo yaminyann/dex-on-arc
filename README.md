@@ -49,7 +49,9 @@ bun run check      # lint and typecheck
 | --- | --- |
 | `VITE_ORDERS_ADDRESS_ARC_TESTNET` | Deployed order contract on Arc Testnet |
 | `TESTNET_DEPLOYER_PRIVATE_KEY` | Backend scripts only. Throwaway Arc Testnet key for the test harness (`server/testnet/`) |
-| `KEEPER_USE_TEST_ROUTER` | Set to `false` to stop the testnet keeper from using the test router |
+| `GATEWAY_PROVIDERS` | Quote providers to use (default `0x,kyber,test-router,test-router-b`). On testnet the keeper fills swaps through the test routers |
+| `KEEPER_WS_URL` | Optional WebSocket RPC; new orders wake the keeper early |
+| `ADMIN_TOKEN` | Bearer token for `/metrics` and detailed `/health` |
 | `VITE_ORDERS_ADDRESS_ARC_MAINNET` | Order contract you deploy on Arc mainnet |
 | `VITE_ORDERS_DEPLOY_TX_ARC_TESTNET`, `VITE_ORDERS_DEPLOY_TX_ARC_MAINNET` | Optional. Deployment transactions, used to start history reads at the right block |
 | `ZEROEX_API_KEY` | Backend only. 0x Swap API key for quotes |
