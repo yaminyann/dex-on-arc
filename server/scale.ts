@@ -162,6 +162,7 @@ export const metrics = {
     txSent: 0,
     wakeups: 0,
     batches: 0,
+    providerFallbacks: 0,
     txFailed: 0,
     consecutiveTickErrors: 0,
     /** Keeper wallet balance in whole USDC, or -1 until first read. */

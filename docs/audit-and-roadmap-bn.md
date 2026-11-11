@@ -227,3 +227,17 @@ QuoteGateway (backend)
 | Integration টেস্ট | spawned backend: x-forwarded-for bypass বন্ধ, `/metrics` সুরক্ষিত, `/health` redacted |
 | Mainnet fork | stock anvil এ Arc USDC transfer চলে না (native precompile)। স্ক্রিপ্ট তৈরি, কিন্তু Arc-এর Foundry fork লাগবে; তাই scenario গুলো চালানো **হয়নি** |
 | বাকি | KMS/HSM signing, Sentry, Redis shared cache, Kyber/0x router mainnet contract এ allowlist (owner, timelock), বাস্তব 0x key পরীক্ষা, contract v2 ও audit, frontend bundle code-splitting (1.68 MB) |
+
+---
+
+## ১১. Phase 3 ও live testnet campaign (2026-11-12)
+
+বিস্তারিত: [test-reports/README.md](test-reports/README.md) ও [mainnet-readiness-checklist.md](mainnet-readiness-checklist.md)।
+
+| বিষয় | ফলাফল |
+| --- | --- |
+| Contract v2 | min order size, expiring config, `ConfigQueued` content, oracle round check, paged views, `executeMany`, renounce বন্ধ। 191 Foundry টেস্ট পাস; size 23,778 / 24,576 byte |
+| Live verified (testnet) | DCA, stop-loss, take-profit, expiry refund, cancel refund (oracle dead / pause অবস্থায় সহ), `executeMany` (2 order, 3টি tx), timelock (ঠিক 3600s, early apply reject, cancel), access control (11 টি admin function), oracle (stale, future, mismatched round, zero, negative, reverting), pause, ownership |
+| Live সম্পূর্ণ হয়নি | OCO ও stop-limit fill (v2 তে নতুন keeper দিয়ে), 3-order batch, router allowlist এর শেষ তিনটি hostile calldata case, router failover। কারণ: test router এর USDC শেষ; faucet captcha লাগে |
+| Campaign এ পাওয়া bug | keeper ও script একই key (nonce race), backoff 10 মিনিট পর্যন্ত, প্রথম provider fail করলে পরেরটি try না করা (সব fix)। v2 size limit পার হয়েছিল (24,800 B) |
+| Mainnet | **কোনো deploy হয়নি।** Audit, oracle পরিকল্পনা, fork test ও owner multisig বাকি; checklist দেখুন |

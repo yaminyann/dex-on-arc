@@ -190,7 +190,9 @@ export function startKeeper(): void {
     openDcas: new Set(),
     retryOrders: new Set(),
     retryDcas: new Set(),
-    backoff: new Backoff(),
+    // Short, capped backoff: a stop-loss that could not fill a moment ago may be fillable seconds later,
+    // so an item should never sit out minutes. Raise these only to protect a tight RPC budget.
+    backoff: new Backoff(envInt('KEEPER_BACKOFF_BASE_MS', 5_000, 500, 600_000), envInt('KEEPER_BACKOFF_MAX_MS', 60_000, 1_000, 3_600_000)),
     role,
     standby: new StandbyGate(envInt('KEEPER_STANDBY_GRACE_MS', 90_000, 1000, 3_600_000)),
     // Testnet fees are worth nothing, so profitability only gates mainnet unless set explicitly.
@@ -414,7 +416,9 @@ async function tick(ctx: Ctx) {
       const key = keyOf(c)
       try {
         const { ranked } = await gateway.rank('quote', { chainId: ctx.chainId, sellToken: c.sellToken, buyToken: c.buyToken, sellAmount: c.sellAmount.toString(), taker: address, slippageBps: Math.min(c.slippageBps, 100) }, { simulate: false })
-        // Best-ranked quote whose target the contract owner has allowlisted.
+        // Every quote whose target the contract owner has allowlisted, best first. The first that simulates
+        // successfully is used, so a provider that is out of liquidity or failing does not block the order.
+        const options: JobOption[] = []
         for (const q of ranked) {
           if (!q.transaction) continue
           if (!(await isAllowed(q.transaction.to))) {
@@ -422,8 +426,9 @@ async function tick(ctx: Ctx) {
             continue
           }
           const feeUsdc6 = expectedFeeUsdc6({ outputIsQuoteToken: c.buyToken.toLowerCase() === quoteToken.toLowerCase(), buyAmount: q.buyAmount, sellAmount: c.sellAmount, feeBps: ctx.feeBps })
-          return { fn: c.fn, args: [c.id, q.transaction.to as Address, q.transaction.data as Hex], key, maintenance: false, feeUsdc6 }
+          options.push({ args: [c.id, q.transaction.to as Address, q.transaction.data as Hex], feeUsdc6, provider: q.provider })
         }
+        if (options.length > 0) return { fn: c.fn, args: options[0].args, key, maintenance: false, feeUsdc6: options[0].feeUsdc6, options }
       } catch {
         // fall through to backoff
       }
@@ -440,10 +445,20 @@ async function tick(ctx: Ctx) {
   const effectiveGasPrice = gasPrice > ctx.gasFloorWei ? gasPrice : ctx.gasFloorWei
   const prepared = (
     await mapLimit(jobs, 8, async (job): Promise<Prepared | null> => {
-      let gas: bigint
-      try {
-        gas = await publicClient.estimateContractGas({ address, abi: ordersAbi, functionName: job.fn, args: job.args as never, account: ctx.wallet.account } as never)
-      } catch {
+      let gas: bigint | undefined
+      const tries: JobOption[] = job.options?.length ? job.options : [{ args: job.args, feeUsdc6: job.feeUsdc6 ?? 0n, provider: 'direct' }]
+      for (const opt of tries) {
+        try {
+          gas = await publicClient.estimateContractGas({ address, abi: ordersAbi, functionName: job.fn, args: opt.args as never, account: ctx.wallet.account } as never)
+          if (opt !== tries[0]) metrics.keeper.providerFallbacks += 1
+          job.args = opt.args
+          job.feeUsdc6 = opt.feeUsdc6
+          break
+        } catch {
+          /* try the next provider's quote */
+        }
+      }
+      if (gas === undefined) {
         if (!job.maintenance) {
           metrics.keeper.failedExecutions += 1
           ctx.backoff.fail(job.key)
@@ -576,6 +591,14 @@ interface Job {
   feeUsdc6?: bigint
   /** For executeMany: the individual executions it carries. */
   members?: Job[]
+  /** Alternative quotes (best first) tried in order until one simulates successfully. */
+  options?: JobOption[]
+}
+
+interface JobOption {
+  args: readonly unknown[]
+  feeUsdc6: bigint
+  provider: string
 }
 
 interface Prepared {

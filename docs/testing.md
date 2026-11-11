@@ -81,6 +81,10 @@ Reference run on this project (local backend, Arc Testnet, public RPC): 800 requ
 
 `scripts/fork-mainnet-test.ts` runs the order contract against the real KyberSwap router and real Arc pools on a local fork: a real keeper-style fill, plus hostile variants (output sent to the keeper, non-allowlisted target, wrong amount, cancel). It needs a fork client that emulates Arc's native-USDC precompile. Stock anvil reads USDC balances but every USDC transfer reverts, so the script detects this, prints why and exits with code 2. It was verified up to that precheck (fork, deploy, timelock jump, Kyber route and build); the scenarios themselves have not been run. Use Arc's Foundry fork to run them.
 
+## Live testnet campaign
+
+[test-reports/README.md](test-reports/README.md) holds the latest live campaign against the v2 contract on Arc Testnet: per-scenario results with transaction hashes, what was verified and what was not, and the defects it found. Scripts: `server/testnet/e2e.ts` (order types, DCA, batching), `server/testnet/e2e-security.ts` (access control, timelock, pause, oracle protection, router allowlist, failover), `server/testnet/refill-routers.ts` (top up the test routers). The test routers pay sells from their own USDC, so a full run needs a few USDC of liquidity; testnet USDC comes from a captcha-gated faucet.
+
 ## Testnet harness tests
 
 | Suite | Where | What it covers |

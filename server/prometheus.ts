@@ -52,6 +52,7 @@ export function renderPrometheus(s: PromSnapshot): string {
     ['{result="sent"}', k.txSent ?? 0],
     ['{result="failed"}', k.txFailed ?? 0],
   ])
+  metric('arc_keeper_provider_fallbacks_total', 'counter', 'Executions that used a lower-ranked provider because the best one failed simulation.', [['', k.providerFallbacks ?? 0]])
   metric('arc_keeper_batches_total', 'counter', 'executeMany transactions prepared.', [['', k.batches ?? 0]])
   metric('arc_keeper_event_wakeups_total', 'counter', 'Idle sleeps ended early by an onchain event.', [['', k.wakeups ?? 0]])
   metric('arc_keeper_standby_waiting', 'gauge', 'Executable items a standby keeper is waiting to take over.', [['', k.standbyWaiting ?? 0]])

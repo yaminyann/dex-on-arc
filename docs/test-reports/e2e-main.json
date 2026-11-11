@@ -1,0 +1,264 @@
+{
+  "label": "main",
+  "chainId": 5042002,
+  "orders": "0xa83efe842010dbd470dfe7cc210d61c4edd908aa",
+  "trader": "0x478fAe148CEd6d1b2Ba8220EDe65CC2cAdB505FA",
+  "ranAt": "2026-11-11T22:52:47.446Z",
+  "passed": 7,
+  "total": 12,
+  "results": [
+    {
+      "name": "oracle reads test feeds through the order contract",
+      "ok": true,
+      "detail": "tBTC $90091.38, tETH $2076.41, tSOL $76.72",
+      "seconds": 1,
+      "txs": [],
+      "contractEvents": []
+    },
+    {
+      "name": "stop-loss sells on a drop",
+      "ok": true,
+      "detail": "filled at 1906.46",
+      "seconds": 15,
+      "txs": [
+        {
+          "fn": "createOrder",
+          "hash": "0x05a608baa26d2b891f9abfeccbb3261a77b646f9c67b0e24bda33324c03e6e23"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0x2e629746e4a2a95a8c2fa33ecf589eed257be2f1601b85f65be3ed9eba41001a"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0x93e24cf35efe806633f923fc3755e00b217fb2f6f4c273fb3a75a4e68e062547"
+        }
+      ],
+      "contractEvents": [
+        {
+          "event": "OrderExecuted",
+          "id": "32",
+          "txHash": "0xc6a14128fd6567214cdba8d7bf1dd141148fe7194659474eb3dbc04c646d36db",
+          "block": "71949540"
+        }
+      ]
+    },
+    {
+      "name": "take-profit sells on a rise",
+      "ok": false,
+      "detail": "timeout waiting for tp fill",
+      "seconds": 154,
+      "txs": [
+        {
+          "fn": "createOrder",
+          "hash": "0xdc10a9764842745810eba2d2b56fc49337991e0808aade34cd022bdf8b54e3e1"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0x4e5a7f8acc1ca57747f83dedc93815d8b89306bf61d016608cf195506286acf4"
+        }
+      ],
+      "contractEvents": [
+        {
+          "event": "OrderExecuted",
+          "id": "28",
+          "txHash": "0x43e2dd1eb33feabaf29c0707509391c18278f444c29935f2f69a3438f86cde0e",
+          "block": "71949563"
+        },
+        {
+          "event": "BatchItemFailed",
+          "id": "33",
+          "txHash": "0x43e2dd1eb33feabaf29c0707509391c18278f444c29935f2f69a3438f86cde0e",
+          "block": "71949563"
+        }
+      ]
+    },
+    {
+      "name": "OCO: take-profit leg fires once and the order cannot run again",
+      "ok": false,
+      "detail": "timeout waiting for oco fill",
+      "seconds": 157,
+      "txs": [
+        {
+          "fn": "createOrder",
+          "hash": "0xf78c8492def275764e7b9bfd2d5c66f547055d9d70c1784da1b7de1d54ae5fef"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0x67182a08fcb5141f3b18e11ee3da49b382b49228e4628258ab367ab4a0aa4466"
+        }
+      ],
+      "contractEvents": []
+    },
+    {
+      "name": "stop-limit: activation persists, no fill below the limit, fills after a rebound",
+      "ok": false,
+      "detail": "timeout waiting for stop-limit fill",
+      "seconds": 172,
+      "txs": [
+        {
+          "fn": "createOrder",
+          "hash": "0x03ac713236d508830762136d716fe55a1a56d999793caac784d3e284afd4bdc0"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0xa4ea1afd92c5d9e5595de7ab3ee8bf801df96850686372bdfc93998db4913915"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0xd1e7f1f75871c42316a2a06eac44a5a7cb858cefe02723f8eb524012aebb066b"
+        }
+      ],
+      "contractEvents": [
+        {
+          "event": "StopActivated",
+          "id": "35",
+          "txHash": "0x25de42aeb1eba3baee1bbac5a09e5ad6dac50fce73eaedd88642f74171d1be89",
+          "block": "71950173"
+        }
+      ]
+    },
+    {
+      "name": "cancel refunds the escrow",
+      "ok": false,
+      "detail": "The method \"eth_sendRawTransaction\" does not exist / is not available. |  | URL: https://rpc.testnet.arc.io",
+      "seconds": 3,
+      "txs": [
+        {
+          "fn": "createOrder",
+          "hash": "0xf29aac596288b8e2323bc7620dc8573f4f974e2b381136fed249363021211835"
+        }
+      ],
+      "contractEvents": []
+    },
+    {
+      "name": "expired order is refunded by a keeper",
+      "ok": true,
+      "detail": "expired and refunded",
+      "seconds": 50,
+      "txs": [
+        {
+          "fn": "createOrder",
+          "hash": "0x8cf9168be6eb3319b4319db0ac891809495908cd67793c435019ba01d9dffefe"
+        }
+      ],
+      "contractEvents": [
+        {
+          "event": "OrderExpired",
+          "id": "37",
+          "txHash": "0x375cae54543dc167698eddbe486f4ba976275362375f1c9ad8a1dce0428d2b19",
+          "block": "71950599"
+        }
+      ]
+    },
+    {
+      "name": "DCA buys on schedule, then pause, resume and cancel refund the rest",
+      "ok": true,
+      "detail": "1 buy executed (0.1 USDC), the remaining budget was refunded",
+      "seconds": 10,
+      "txs": [
+        {
+          "fn": "createDca",
+          "hash": "0x2e808d68d4e4575f8e0688101b7d80f6e58106cdb5119493de7de720db64b273"
+        },
+        {
+          "fn": "pauseDca",
+          "hash": "0x09e6c98466d5374108d09587db42d01d656846ace0ad427407d084cbca262650"
+        },
+        {
+          "fn": "resumeDca",
+          "hash": "0x7d55695af4e9aca71aa4459a5c84d61f06a0ee6c46054000ea49f2905baf0cb5"
+        },
+        {
+          "fn": "cancelDca",
+          "hash": "0x234d644fbd389000f134bb9b93b26d1000eeb68b946031e9a46b528a5ea0f399"
+        }
+      ],
+      "contractEvents": [
+        {
+          "event": "DcaExecuted",
+          "id": "2",
+          "txHash": "0x4e46994fd59a40256e3e530d4a901cf3dac91209e092154697d8bab21079858c",
+          "block": "71950610"
+        }
+      ]
+    },
+    {
+      "name": "market swap through the test router (what the UI sends)",
+      "ok": true,
+      "detail": "0.3 USDC bought 0.000044964362240362 tETH",
+      "seconds": 3,
+      "txs": [
+        {
+          "fn": "approve",
+          "hash": "0x7bfeefd88e8352aa215100d9aac99c9b8d9405b7899535d46827348e830d8cdb"
+        },
+        {
+          "fn": "swapExactIn",
+          "hash": "0x4894b080e4cf81ddf05b06c8acb5e666d2ed292f4194b338c575a8e4632ef70c"
+        }
+      ],
+      "contractEvents": []
+    },
+    {
+      "name": "v2: an order below the minimum size is rejected",
+      "ok": true,
+      "detail": "0.05 USDC rejected (minimum 0.1)",
+      "seconds": 1,
+      "txs": [],
+      "contractEvents": []
+    },
+    {
+      "name": "v2: paged views agree with the full id list",
+      "ok": true,
+      "detail": "6 orders, page of 3 matches",
+      "seconds": 1,
+      "txs": [],
+      "contractEvents": []
+    },
+    {
+      "name": "v2: a keeper batches several ready orders into one executeMany transaction",
+      "ok": false,
+      "detail": "timeout waiting for all three batch orders executed",
+      "seconds": 157,
+      "txs": [
+        {
+          "fn": "createOrder",
+          "hash": "0x969d7785991efe835909e604ff9e6929e7c8cf0895e3d5b226cd02e0a11ab26c"
+        },
+        {
+          "fn": "createOrder",
+          "hash": "0x85f1d4ea14ccd63e2e23ea6ebaadd80119893024e8c4707d7f7004e4a5f2d12d"
+        },
+        {
+          "fn": "createOrder",
+          "hash": "0xc16a712966480d771f6cdda9f290b84fee49aca08756bf1f51816cf6f70ef39f"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0x4f06e76335666442e50ae0accae0cb11070e005b1322406f075f2ab013db7dea"
+        }
+      ],
+      "contractEvents": [
+        {
+          "event": "OrderExecuted",
+          "id": "38",
+          "txHash": "0x3d70d02ad5fd9c5a231ea90c198764dffe9f6b6d61f34639cb8c29f23f2853d6",
+          "block": "71950646"
+        },
+        {
+          "event": "OrderExecuted",
+          "id": "39",
+          "txHash": "0x3d70d02ad5fd9c5a231ea90c198764dffe9f6b6d61f34639cb8c29f23f2853d6",
+          "block": "71950646"
+        },
+        {
+          "event": "BatchItemFailed",
+          "id": "40",
+          "txHash": "0x3d70d02ad5fd9c5a231ea90c198764dffe9f6b6d61f34639cb8c29f23f2853d6",
+          "block": "71950646"
+        }
+      ]
+    }
+  ]
+}

@@ -69,6 +69,7 @@ Changing a `VITE_` variable needs a dev-server restart.
 | `KEEPER_PROFIT_MARGIN_BPS` | `0` | Extra margin over break-even, in bps of gas cost |
 | `KEEPER_MIN_FEE_USDC_MICRO` | `0` | Absolute minimum expected fee, in millionths of a USDC |
 | `KEEPER_MIN_GAS_PRICE_GWEI` | `20` | Fee floor. Arc drops transactions priced below its base-fee floor without an error |
+| `KEEPER_BACKOFF_BASE_MS` / `KEEPER_BACKOFF_MAX_MS` | `5000` / `60000` | Per-item retry backoff after a failed execution attempt. Keep it short: a stop-loss that could not fill moments ago may fill seconds later |
 | `KEEPER_MIN_BALANCE_USDC` | `1` | The keeper alerts when its USDC balance falls below this |
 
 ## RPC selection (backend)

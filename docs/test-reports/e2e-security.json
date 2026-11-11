@@ -1,0 +1,210 @@
+{
+  "label": "security",
+  "chainId": 5042002,
+  "orders": "0xa83efe842010dbd470dfe7cc210d61c4edd908aa",
+  "owner": "0x43aBbA38cCfbfa7D0044104681542347dfCB34F7",
+  "trader": "0xE90A4B44C9f6079137863a529cB2c5d752e76571",
+  "ranAt": "2026-11-11T22:56:39.993Z",
+  "passed": 6,
+  "total": 8,
+  "results": [
+    {
+      "name": "access control: a non-owner cannot call any admin function",
+      "ok": true,
+      "detail": "11 admin functions all rejected the outsider: queueTokenConfig, queueSwapTarget, applyConfig, cancelConfig, disableToken, disableSwapTarget, setKeeperFeeBps, setMinOrderQuote, pause, unpause, transferOwnership",
+      "seconds": 3,
+      "txs": []
+    },
+    {
+      "name": "timelock: a queued change cannot be applied early, is fully visible, and can be cancelled",
+      "ok": true,
+      "detail": "eta = queue time + 3600s; ConfigQueued carries subject/flags; early apply -> ConfigNotReady; cancel clears it; later apply -> ConfigUnknown",
+      "seconds": 6,
+      "txs": [
+        {
+          "fn": "queueSwapTarget",
+          "hash": "0x2194505fd0997b541e3ad90679b658dec8c5472bbcbb75d8954dd8dc6a65287e"
+        },
+        {
+          "fn": "cancelConfig",
+          "hash": "0x14dc74a1fc9ef559e5f0629113545687c15e7cae6d92a681f924e368508ab148"
+        }
+      ]
+    },
+    {
+      "name": "keeper fee can only be lowered; minimum order size is bounded",
+      "ok": true,
+      "detail": "raise fee 10 -> 11; min order 10,001 USDC rejected",
+      "seconds": 1,
+      "txs": []
+    },
+    {
+      "name": "ownership: renounce is disabled and a pending transfer does not change the owner",
+      "ok": true,
+      "detail": "renounce -> RenounceDisabled; transferOwnership only sets pendingOwner; an outsider cannot accept; pending cleared",
+      "seconds": 4,
+      "txs": [
+        {
+          "fn": "transferOwnership",
+          "hash": "0x06c0a9b052a5f6bdba8147f4d157617b12fb622a36feabf32775bbd3ec167c3f"
+        },
+        {
+          "fn": "transferOwnership",
+          "hash": "0x79b4ec6cd26d7a74044b718ffa9f8d5a1e9ddc97f73514b734948d9ab3d8e51f"
+        }
+      ]
+    },
+    {
+      "name": "pause: blocks new orders and execution but never blocks cancel and refund",
+      "ok": true,
+      "detail": "create and execute rejected while paused; cancel refunded 0.0012 tORC in full; unpaused",
+      "seconds": 15,
+      "txs": [
+        {
+          "fn": "set",
+          "hash": "0xbc73777d21fff554d61a7c39791cf45c795f3c516585efabbbe5ec0e2f4087a8"
+        },
+        {
+          "fn": "createOrder",
+          "hash": "0xda49066e2576200f3affa379394fd2025f5365bb8d1b7cc8cfebc1c1a56ed5b7"
+        },
+        {
+          "fn": "pause",
+          "hash": "0xf28b6fa95c192ab3d71d06ec66361701dc51c8a58453f74cf73bdd45eee5d5c9"
+        },
+        {
+          "fn": "cancelOrder",
+          "hash": "0x8dedb69a365f1e4b7d10f94669bdde92864579b50dc41721560115b208baf883"
+        },
+        {
+          "fn": "unpause",
+          "hash": "0x4056be9b192cef6a9d57d11553d19da06961900369d98e24a1815ee79a498261"
+        }
+      ]
+    },
+    {
+      "name": "oracle: stale, future-dated, mismatched-round, non-positive and reverting feeds are all rejected; funds stay recoverable",
+      "ok": true,
+      "detail": "6 bad feed states rejected on createOrder and execute, checkOrder reports reason 4; cancel refunded with a dead oracle; recovery to a healthy feed works",
+      "seconds": 35,
+      "txs": [
+        {
+          "fn": "set",
+          "hash": "0x1d4016e78fc744d430f5832b63f7b9d8d527fdfd2678c2bf45034487b39c347f"
+        },
+        {
+          "fn": "createOrder",
+          "hash": "0x41a249a522b0be41fb62ed8d79fde6625ca4df9e0e2b4f0524ca7cf0a05f0ba7"
+        },
+        {
+          "fn": "set",
+          "hash": "0x414a4ebdc86b24416b125cca37ccb06a1c91d334a972c56e583df4a6992b790d"
+        },
+        {
+          "fn": "set",
+          "hash": "0xc30447fe8601dd01a6b7da6ee1204f333b47f7172e2242d4f57b5c00870baceb"
+        },
+        {
+          "fn": "set",
+          "hash": "0xf81e954b942645320221a9291565e7534e8db4d873748d7a5ed8dd0485f5b8a7"
+        },
+        {
+          "fn": "set",
+          "hash": "0x4ec780dcf34472f04412a03aee714d5d92be743305b93b673ff5661f43d44bc9"
+        },
+        {
+          "fn": "set",
+          "hash": "0x92b9c0ca450024ae0c818e3df34c5c216e014f5fb49793945cd759dc2fc91af8"
+        },
+        {
+          "fn": "setBroken",
+          "hash": "0xf6534eccba5f54411ed1d653695c2b2b749db6a8627aeaa4f701ce2d3b611a86"
+        },
+        {
+          "fn": "cancelOrder",
+          "hash": "0x797cba63a0e2101af1b797f9b3c9d8326070a25b6053286a49a3ff996f43b86d"
+        },
+        {
+          "fn": "setBroken",
+          "hash": "0x1e008606585413df1955622d6f3ad44bcbaabf5bbdec429ee825a6a4505289f6"
+        },
+        {
+          "fn": "set",
+          "hash": "0x2a3581c139647bd97726388222d9c74177984a6ea56c20f1df35487a8902799b"
+        },
+        {
+          "fn": "createOrder",
+          "hash": "0x10e58f7da421fea376ad0df116bc42350d6a2e547ba6a071a322babde40cdebe"
+        },
+        {
+          "fn": "cancelOrder",
+          "hash": "0x01d65a90b84dfac25a1e751218e7941c20c127ab31ba98605b860005c6a44b28"
+        }
+      ]
+    },
+    {
+      "name": "router allowlist: unknown targets, tokens, partial spends, wrong output and garbage calldata are rejected",
+      "ok": false,
+      "detail": "allowlisted router, half the input (partial fill): reverted, but not with /PartialFill/: The contract function \"execute\" reverted with the following signature: 0xc480be2e  Unable to decode signature \"0xc480be2e\" as it was not found on the provided ABI.",
+      "seconds": 6,
+      "txs": [
+        {
+          "fn": "setFeed",
+          "hash": "0x60a955a68460dbef842f17a6d63e9efbfc4af80ff92be818ecaa909262dfcba9"
+        },
+        {
+          "fn": "setFeed",
+          "hash": "0x4fd49c2da9a227bc2b1de37031441c915ef484ba866a58c0373c0cf7fcd74982"
+        },
+        {
+          "fn": "set",
+          "hash": "0x5ded64cc5efb3f97efa078e9885c2daf9494ff3dc27116f44072c328e0f22c5b"
+        },
+        {
+          "fn": "createOrder",
+          "hash": "0x805e47f06cfca90665c493652ae27534c21caead5f5c2581e32446e7bc857d48"
+        }
+      ]
+    },
+    {
+      "name": "router disable is instant and owner-only, and the keeper fails over to the other allowlisted router",
+      "ok": false,
+      "detail": "the keeper did not execute the order after router A was disabled",
+      "seconds": 143,
+      "txs": [
+        {
+          "fn": "disableSwapTarget",
+          "hash": "0x024c2318d04007943af565004468b66f93fc04f7e150ce7fac0551dbbbe3dad6"
+        },
+        {
+          "fn": "set",
+          "hash": "0x2842bddc4cdb8993a5bb96bbad236535c34456b1872c975183e417fd95f2e24a"
+        },
+        {
+          "fn": "createOrder",
+          "hash": "0x1841dd6ef7c181d5f27687bf591029f0d96971991e89f5346bca9b6b35b2f3a2"
+        },
+        {
+          "fn": "cancelOrder",
+          "hash": "0x264c4fa7957791a464761c72402c0d9ed0d1ec4b57b748f166815acda5dc0c1c"
+        },
+        {
+          "fn": "faucet",
+          "hash": "0xbc2514f057e992e8800bced956341cd919acf8afa690cb44b88adb6aa842b629"
+        },
+        {
+          "fn": "approve",
+          "hash": "0x53b9f6f5b53164a3bfedbe6c410e4d5d863d9df6ee3c0324fdf86f144c9edbf4"
+        },
+        {
+          "fn": "createOrder",
+          "hash": "0x4f6699587186681d141b9575ee627f615fab34a9c096303fa3c7125cdfe7103e"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0x05ce1334872cff2ebc42c434737f7138ac4e78fd5e510cd0b05bb3e1a6750617"
+        }
+      ]
+    }
+  ]
+}

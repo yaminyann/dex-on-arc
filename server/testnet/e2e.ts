@@ -10,8 +10,9 @@
  * Uses a throwaway trader wallet funded from the deployer. Amounts are tiny because the test router
  * pays sells out of its own USDC balance.
  */
-import { createPublicClient, createWalletClient, erc20Abi, http, parseUnits, type Abi, type Address, type Hex } from 'viem'
-import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
+import { mkdir, writeFile } from 'node:fs/promises'
+import { createPublicClient, createWalletClient, erc20Abi, http, keccak256, parseEventLogs, parseUnits, stringToHex, type Abi, type Address, type Hex } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
 import { arcTestnet } from 'viem/chains'
 import { getChain, getUsdc } from '../../src/onchain-facts'
 import { ordersAbi } from '../../src/trading/ordersAbi'
@@ -28,7 +29,9 @@ const ROUTER = harness.router as Address
 
 const pub = createPublicClient({ chain: arcTestnet, transport: http(rpc) })
 const deployer = privateKeyToAccount(deployerKey)
-const trader = privateKeyToAccount(generatePrivateKey())
+// The throwaway trader key is derived from the deployer key and a seed, so leftover funds are always recoverable.
+const SEED = process.env.E2E_SEED ?? String(Date.now())
+const trader = privateKeyToAccount(keccak256(stringToHex(`${deployerKey}:trader:${SEED}`)))
 const deployerWallet = createWalletClient({ account: deployer, chain: arcTestnet, transport: http(rpc) })
 const traderWallet = createWalletClient({ account: trader, chain: arcTestnet, transport: http(rpc) })
 
@@ -45,11 +48,16 @@ const Side = { BUY: 0, SELL: 1 }
 const Type = { LIMIT: 0, STOP_LOSS: 1, TAKE_PROFIT: 2, STOP_LIMIT: 3, TRAILING_STOP: 4, OCO: 5 }
 const Status = { OPEN: 0, EXECUTED: 1, CANCELLED: 2, EXPIRED: 3 }
 
-const results: { name: string; ok: boolean; detail: string }[] = []
+interface TxRef { fn: string; hash: string }
+interface ChainEvent { event: string; id: string; txHash: string; block: string }
+const results: { name: string; ok: boolean; detail: string; seconds: number; txs: TxRef[]; contractEvents: ChainEvent[] }[] = []
+/** Transactions sent by this script while the current scenario runs. */
+const sent: TxRef[] = []
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 async function send(wallet: typeof deployerWallet, address: Address, abi: Abi, functionName: string, args: unknown[]): Promise<Hex> {
   const hash = await wallet.writeContract({ address, abi, functionName, args } as never)
+  sent.push({ fn: functionName, hash })
   const r = await pub.waitForTransactionReceipt({ hash })
   if (r.status !== 'success') throw new Error(`${functionName} reverted`)
   return hash
@@ -90,17 +98,39 @@ async function createOrder(p: { base: Address; side: number; type: number; amoun
   return id
 }
 
+const only = (process.env.E2E_ONLY ?? '').split('|').map((x) => x.trim()).filter(Boolean)
+
 async function scenario(name: string, fn: () => Promise<string>) {
-  const started = Date.now()
-  try {
-    const detail = await fn()
-    results.push({ name, ok: true, detail })
-    console.log(`PASS ${name} (${Math.round((Date.now() - started) / 1000)}s): ${detail}`)
-  } catch (e) {
-    const msg = e instanceof Error ? e.message.split('\n')[0] : String(e)
-    results.push({ name, ok: false, detail: msg })
-    console.log(`FAIL ${name}: ${msg}`)
+  if (only.length && !only.some((x) => name.includes(x))) {
+    console.log(`SKIP ${name}`)
+    return
   }
+  const started = Date.now()
+  const startBlock = await pub.getBlockNumber()
+  sent.length = 0
+  let ok = true
+  let detail: string
+  try {
+    detail = await fn()
+  } catch (e) {
+    ok = false
+    detail = e instanceof Error ? e.message.split('\n').slice(0, 3).join(' | ') : String(e)
+  }
+  // Contract events in the scenario's block window also expose the keeper's own transactions (executions, expiry refunds).
+  let contractEvents: ChainEvent[] = []
+  try {
+    const raw = await pub.getLogs({ address: ORDERS, fromBlock: startBlock, toBlock: await pub.getBlockNumber() })
+    contractEvents = parseEventLogs({ abi: ordersAbi, logs: raw, strict: false })
+      .filter((l) => ['OrderExecuted', 'DcaExecuted', 'OrderExpired', 'StopActivated', 'TrailingPeakUpdated', 'BatchItemFailed'].includes(l.eventName ?? ''))
+      .map((l) => ({ event: l.eventName ?? '?', id: String((l.args as { id?: bigint }).id ?? ''), txHash: l.transactionHash ?? '', block: String(l.blockNumber) }))
+  } catch {
+    /* the range can exceed the RPC's limit on very long scenarios */
+  }
+  const seconds = Math.round((Date.now() - started) / 1000)
+  results.push({ name, ok, detail, seconds, txs: [...sent], contractEvents })
+  console.log(`${ok ? 'PASS' : 'FAIL'} ${name} (${seconds}s): ${detail}`)
+  for (const t of sent) console.log(`    tx ${t.fn} ${t.hash}`)
+  for (const e of contractEvents) console.log(`    keeper/chain ${e.event} id=${e.id} ${e.txHash}`)
 }
 
 async function main() {
@@ -108,9 +138,11 @@ async function main() {
   const t = (s: string) => tokens[s].address as Address
   const f = (s: string) => tokens[s].feed as Address
 
-  console.log(`trader ${trader.address}`)
+  const routerUsdc = await Promise.all([ROUTER, (harness as { routerB?: Address }).routerB].filter((a): a is Address => Boolean(a)).map(async (a) => `${a.slice(0, 8)}… ${Number(await bal(USDC, a)) / 1e6} USDC`))
+  console.log(`test router liquidity: ${routerUsdc.join(', ')}`)
+  console.log(`trader ${trader.address} (seed ${SEED})`)
   // Gas for the trader (USDC is the native gas token on Arc).
-  const gasHash = await deployerWallet.sendTransaction({ to: trader.address, value: parseUnits('1.1', 18) })
+  const gasHash = await deployerWallet.sendTransaction({ to: trader.address, value: parseUnits(process.env.E2E_FUND ?? '1.6', 18) })
   await pub.waitForTransactionReceipt({ hash: gasHash })
   for (const s of ['tBTC', 'tETH', 'tSOL']) await send(traderWallet, t(s), faucetAbi as unknown as Abi, 'faucet', [])
   for (const s of ['tBTC', 'tETH', 'tSOL']) await send(traderWallet, t(s), erc20Abi as unknown as Abi, 'approve', [ORDERS, 2n ** 255n])
@@ -129,9 +161,10 @@ async function main() {
     return out.join(', ')
   })
 
-  const amtBtc = parseUnits('0.00002', 8)
-  const amtEth = parseUnits('0.0007', 18)
-  const amtSol = parseUnits('0.015', 9)
+  // Small sizes (about 0.4 USDC each, above the 0.1 USDC minimum): the test routers pay sells from their own USDC.
+  const amtBtc = parseUnits(process.env.E2E_BTC ?? '0.000005', 8)
+  const amtEth = parseUnits(process.env.E2E_ETH ?? '0.00018', 18)
+  const amtSol = parseUnits(process.env.E2E_SOL ?? '0.004', 9)
 
   await scenario('limit sell fills through keeper after price rises', async () => {
     const p0 = await price18(t('tBTC'))
@@ -234,7 +267,7 @@ async function main() {
   })
 
   await scenario('DCA buys on schedule, then pause, resume and cancel refund the rest', async () => {
-    const per = parseUnits('0.4', 6)
+    const per = parseUnits(process.env.E2E_DCA_PER ?? '0.4', 6)
     const before = await bal(USDC, trader.address)
     await send(traderWallet, ORDERS, ordersAbi as unknown as Abi, 'createDca', [t('tBTC'), per, 2, 3600, 0, 300, 0n])
     const id = (await pub.readContract({ address: ORDERS, abi: ordersAbi, functionName: 'nextDcaId' })) - 1n
@@ -256,7 +289,7 @@ async function main() {
 
   await scenario('market swap through the test router (what the UI sends)', async () => {
     const before = await bal(t('tETH'), trader.address)
-    const amount = parseUnits('0.3', 6)
+    const amount = parseUnits(process.env.E2E_SWAP ?? '0.3', 6)
     await send(traderWallet, USDC, erc20Abi as unknown as Abi, 'approve', [ROUTER, amount])
     await send(traderWallet, ROUTER, routerAbi as unknown as Abi, 'swapExactIn', [USDC, t('tETH'), amount])
     const got = (await bal(t('tETH'), trader.address)) - before
@@ -295,7 +328,7 @@ async function main() {
     const now = await price18(t('tETH'))
     const trigger = (now * 103n) / 100n
     const ids: bigint[] = []
-    for (let i = 0; i < 3; i++) ids.push(await createOrder({ base: t('tETH'), side: Side.SELL, type: Type.LIMIT, amountIn: amtEth, trigger }))
+    for (let i = 0; i < Number(process.env.E2E_BATCH_N ?? 3); i++) ids.push(await createOrder({ base: t('tETH'), side: Side.SELL, type: Type.LIMIT, amountIn: amtEth, trigger }))
     await setFeedPct(f('tETH'), 6)
     await waitFor('all three batch orders executed', async () => {
       const orders = await Promise.all(ids.map((id) => getOrder(id)))
@@ -324,7 +357,12 @@ async function main() {
 
   const failed = results.filter((r) => !r.ok)
   console.log(`\n${results.length - failed.length}/${results.length} scenarios passed`)
-  await Bun.write(`${process.env.TEMP ?? process.env.TMPDIR ?? '/tmp'}/e2e-results.json`, JSON.stringify({ trader: trader.address, results }, null, 2))
+  const label = process.env.E2E_LABEL ?? 'run'
+  await mkdir('docs/test-reports', { recursive: true })
+  await writeFile(
+    `docs/test-reports/e2e-${label}.json`,
+    JSON.stringify({ label, chainId: arcTestnet.id, orders: ORDERS, trader: trader.address, ranAt: new Date().toISOString(), passed: results.filter((r) => r.ok).length, total: results.length, results }, null, 2) + '\n',
+  )
   process.exit(failed.length === 0 ? 0 : 1)
 }
 

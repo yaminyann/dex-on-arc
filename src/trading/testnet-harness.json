@@ -68,10 +68,25 @@
       "label": "swap router B",
       "changeId": "0xf14f77dcd148444b844d738803b36eab9720357bf85a1fba07e43e403452c904",
       "eta": 1794430982
+    },
+    {
+      "label": "oracle test token feed (tORC, 60s staleness)",
+      "changeId": "0xdd7cbd61e9fd9e2a0f34a943115ea4cae8c9b917e76d2b2f11fb018c4f65052a",
+      "eta": 1794435842
+    },
+    {
+      "label": "swap router A re-enable",
+      "changeId": "0x6b7725dc31e75e128df3814b1bba8e5bff239363e51658822e0a2420b163e999",
+      "eta": 1794442100
     }
   ],
   "deployedAt": "2026-11-11T20:03:04.189Z",
   "routerB": "0x5efcfe5aecbf618c149288496289d305edf107bd",
   "ordersV1": "0x259d5810aadfde23ac193dce84e6462025cea02c",
-  "ordersV1DeployTx": "0xe4502544be333a434ce839a274e24df077c49259a9872da0de6d38c2bddb3750"
+  "ordersV1DeployTx": "0xe4502544be333a434ce839a274e24df077c49259a9872da0de6d38c2bddb3750",
+  "oracleTest": {
+    "token": "0x72dd1d9b41964c91016fb22a2febcda2a502a2b6",
+    "feed": "0x71f3cc6fdebb13bdf5a22285821a01a1007cd706",
+    "queueTx": "0x9e86c412fa5333759195e2d6182b07f7b5adda8889438d6f3ae5c83afd7716cd"
+  }
 }

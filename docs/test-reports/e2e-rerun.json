@@ -1,0 +1,128 @@
+{
+  "label": "rerun",
+  "chainId": 5042002,
+  "orders": "0xa83efe842010dbd470dfe7cc210d61c4edd908aa",
+  "trader": "0xD79709721FFD677E3c6719361207FCA253c50EDB",
+  "ranAt": "2026-11-11T23:06:32.027Z",
+  "passed": 2,
+  "total": 5,
+  "results": [
+    {
+      "name": "take-profit sells on a rise",
+      "ok": true,
+      "detail": "filled at 82.8376811594203",
+      "seconds": 11,
+      "txs": [
+        {
+          "fn": "createOrder",
+          "hash": "0x16a0f11b566d432d7327bd57557e3a22f43e1203c09beae895c776e20f05681c"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0x6b8cdfb0713363c44bfa89b2a2033df8d928203312844b18ad2688a5919ad182"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0x3cc0bdbbc42412ad17c169b4c17774e27f28e4d451c2f1972c5d5244af927ea2"
+        }
+      ],
+      "contractEvents": [
+        {
+          "event": "OrderExecuted",
+          "id": "33",
+          "txHash": "0x269ecbc893644edcf18705c6d2c4e6df9994422a49294b1dc93d80d8b8647bc5",
+          "block": "71951585"
+        },
+        {
+          "event": "OrderExecuted",
+          "id": "47",
+          "txHash": "0x269ecbc893644edcf18705c6d2c4e6df9994422a49294b1dc93d80d8b8647bc5",
+          "block": "71951585"
+        }
+      ]
+    },
+    {
+      "name": "OCO: take-profit leg fires once and the order cannot run again",
+      "ok": false,
+      "detail": "timeout waiting for oco fill",
+      "seconds": 160,
+      "txs": [
+        {
+          "fn": "createOrder",
+          "hash": "0xec388ad9c9be77a6b9be87f53c03d2c97b8a549cc41c1f7f034c41e8f0aba30f"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0x3b5b1911caacc7f6fdb32afaa74ab1c864afb01304e14dec76080b9f79f1bed0"
+        }
+      ],
+      "contractEvents": []
+    },
+    {
+      "name": "stop-limit: activation persists, no fill below the limit, fills after a rebound",
+      "ok": false,
+      "detail": "timeout waiting for stop-limit fill",
+      "seconds": 172,
+      "txs": [
+        {
+          "fn": "createOrder",
+          "hash": "0xca045a5a2798c05245e89df19ba7acd2f1b91cc6983651b3cdd56b18cb3691cd"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0x08d0782ec9c222666db5ca9b1842fe5ce21b3cb50a0a1cc7814ffdb3703b07c0"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0x0fa2c3313a1d0a23f9f677d1fa42b4b88df34902cf56fc84993fe18654f77273"
+        }
+      ],
+      "contractEvents": [
+        {
+          "event": "StopActivated",
+          "id": "49",
+          "txHash": "0x13301f611f71a5ba45956991ef9fe8cbbade6b998d5f3f7015c2e19cd13e37cf",
+          "block": "71951922"
+        }
+      ]
+    },
+    {
+      "name": "cancel refunds the escrow",
+      "ok": true,
+      "detail": "escrow taken then fully refunded",
+      "seconds": 4,
+      "txs": [
+        {
+          "fn": "createOrder",
+          "hash": "0x9b4a8ab55284021a7c3d1c4e1362c09bad0bcfbcfa21293dee434b2d9414e769"
+        },
+        {
+          "fn": "cancelOrder",
+          "hash": "0x8967b26c6035e8aa9d47785f0bfc68c690d5a58c446d08c6e749abe074473717"
+        }
+      ],
+      "contractEvents": []
+    },
+    {
+      "name": "v2: a keeper batches several ready orders into one executeMany transaction",
+      "ok": false,
+      "detail": "timeout waiting for all three batch orders executed",
+      "seconds": 157,
+      "txs": [
+        {
+          "fn": "createOrder",
+          "hash": "0xba04cb10f411f4722abc9dff8e783e8d01548ab3ad9bcba06c9db2abe89ab8f6"
+        },
+        {
+          "fn": "createOrder",
+          "hash": "0xca7bbfb03b9c4373446d343907afbe608824009984dd2ba983a0b6757952924c"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0x723787a0123bfcb9a6c439f1ee958981385451d88d4822c6021e15b8e97b714f"
+        }
+      ],
+      "contractEvents": []
+    }
+  ]
+}
