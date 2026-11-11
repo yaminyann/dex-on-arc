@@ -85,7 +85,7 @@ The deployed contract is intentionally unchanged by the scaling work, because ch
 2. **Paged views**: `getOrderIds(owner, offset, limit)` and a combined `getOrders(ids[])` view to remove the extra multicalls.
 3. **Open-order index**: an onchain or event-derived structure keyed by trigger bucket, so keepers query only orders near the current price.
 4. **Event-driven keeper**: subscribe to `OrderCreated` and oracle `AnswerUpdated` events instead of polling.
-5. **Optional indexer**: persist events in Postgres to serve history and analytics without per-user log scans. If you add a database, make sure data survives restarts (use a volume or managed database).
+5. **Optional indexer**: now built off-chain (see [indexer.md](indexer.md)); it serves history without per-user log scans. Use a durable volume or managed Postgres.
 
 ## Capacity planning worksheet
 

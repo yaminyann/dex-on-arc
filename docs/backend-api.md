@@ -84,6 +84,10 @@ Adding a provider: implement `QuoteProvider` (`server/gateway/types.ts`), normal
 
 Arc Testnet has no real aggregator, so the gateway also serves `test-router` and `test-router-b`, the two deployed `TestSwapRouter` contracts from the harness record. They price at the public test feeds minus 0.10% and exist so that the whole path (gateway ranking, keeper selection among allowlisted targets, execution) can be rehearsed on testnet before mainnet. Limit providers with `GATEWAY_PROVIDERS`.
 
+## History endpoints
+
+`GET /history`, `GET /swaps`, `GET /stats` and `POST /swaps` come from the optional indexer and are described in [indexer.md](indexer.md).
+
 ## Observability
 
 `GET /metrics` (operator only) returns JSON. `GET /metrics?format=prometheus` (or `Accept: text/plain`) returns Prometheus text with request, cache, keeper action, keeper balance, last-OK-tick age and per-provider `arc_gateway_provider_up` series. Set `ALERT_WEBHOOK_URL` to be notified when the keeper wallet runs low, ticks fail three times in a row, or a quote provider's breaker opens (one message per condition per 15 minutes, plus one on recovery).

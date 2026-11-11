@@ -36,6 +36,16 @@ Changing a `VITE_` variable needs a dev-server restart.
 | `ALERT_WEBHOOK_URL` | none | Receives `{"text": "..."}` for keeper and provider alerts (deduplicated, secrets redacted) |
 | `VITE_SWAP_TARGETS_ARC` | none | Frontend. Extra reviewed swap contracts (comma-separated) allowed for market swaps on Arc mainnet, in addition to the 0x AllowanceHolder |
 
+## Indexer (optional)
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `INDEXER_ENABLED` | off | `true` starts the event indexer and the `/history`, `/swaps`, `/stats` endpoints |
+| `INDEXER_NETWORK` | `arc-testnet` | `arc-testnet` or `arc` |
+| `INDEXER_INTERVAL_MS` | `5000` | Poll interval |
+| `INDEXER_START_BLOCK` | deployment block | First block to scan when there is no cursor |
+| `DATABASE_URL` | `sqlite://./data/indexer.db` | SQLite file or `postgres://...`. Put it on durable storage. See [indexer.md](indexer.md) |
+
 ## Keeper (optional)
 
 | Variable | Default | Purpose |

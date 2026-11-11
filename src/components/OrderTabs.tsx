@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { clsx } from 'clsx'
 import { useDcas, useExecutionLogs, useNowSeconds, useOracle, useOrders } from '@/trading/hooks'
 import { useLocalTrades } from '@/trading/localTrades'
+import { useServerSwaps } from '@/trading/history'
 import { useTx } from '@/trading/tx'
 import { ordersAbi } from '@/trading/ordersAbi'
 import { averagePrice18, formatPrice18, formatToken } from '@/trading/math'
@@ -34,6 +35,7 @@ export function OrderTabs({ network }: { network: NetworkConfig }) {
   const dcas = useDcas(network, address)
   const logs = useExecutionLogs(network, address)
   const local = useLocalTrades().filter((t) => t.chainId === network.chainId)
+  const serverSwaps = useServerSwaps(network.chainId, address)
   const tx = useTx(network)
   const qc = useQueryClient()
 
@@ -131,6 +133,27 @@ export function OrderTabs({ network }: { network: NetworkConfig }) {
               `min ${m.minBuyAmount} ${m.buySymbol}`,
               '-',
               <TxLink key="t" chainId={network.chainId} hash={m.hash} />,
+            ],
+          })
+        }
+        // Swaps the backend verified onchain that this browser did not send itself (other device, cleared storage).
+        const localHashes = new Set(local.map((m) => m.hash.toLowerCase()))
+        for (const s of serverSwaps.data ?? []) {
+          if (localHashes.has(s.txHash.toLowerCase())) continue
+          const sold = lookupToken(network, s.sellToken)
+          const got = lookupToken(network, s.buyToken)
+          const buy = s.sellToken.toLowerCase() === network.quote.address.toLowerCase()
+          rows.push({
+            time: s.blockTime,
+            cells: [
+              fmtDateTime(s.blockTime),
+              `${(buy ? got : sold)?.symbol ?? '?'}/${network.quote.symbol}`,
+              'Market swap',
+              <span key="s" className={buy ? 'text-up' : 'text-down'}>{buy ? 'Buy' : 'Sell'}</span>,
+              '-',
+              got ? `${formatToken(BigInt(s.buyAmount), got.decimals, 6)} ${got.symbol}` : s.buyAmount,
+              '-',
+              <TxLink key="t" chainId={network.chainId} hash={s.txHash} />,
             ],
           })
         }

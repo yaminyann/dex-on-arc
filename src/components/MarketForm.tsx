@@ -5,6 +5,7 @@ import { Amount, gasTokenToUsdc } from '@/onchain-money'
 import { AggregatorError, getAggregator } from '@/trading/aggregator'
 import { useBackendHealth, useBalances } from '@/trading/hooks'
 import { addLocalTrade } from '@/trading/localTrades'
+import { reportSwap } from '@/trading/history'
 import { formatPrice18, formatToken, pctDiff, parseTokenAmount, toInputString, WAD } from '@/trading/math'
 import { Side } from '@/trading/types'
 import { Button, Field, Notice, Row, Skeleton } from './ui'
@@ -59,6 +60,7 @@ export function MarketForm({ ctx }: { ctx: TradeCtx }) {
       const firm = await aggregator.quote({ chainId: network.chainId, sellToken: sellToken.address, buyToken: buyToken.address, sellAmount, taker: address, slippageBps })
       if (!firm?.transaction) throw new AggregatorError('NO_ROUTE', 'No executable route right now.')
       const receipt = await flow.tx.send('Swap', { to: firm.transaction.to, data: firm.transaction.data, value: firm.transaction.value })
+      void reportSwap(network.chainId, receipt.transactionHash)
       addLocalTrade({
         hash: receipt.transactionHash,
         chainId: network.chainId,

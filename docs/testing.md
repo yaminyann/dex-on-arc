@@ -28,7 +28,7 @@ Run a subset: `forge test --match-path 'contracts/test/ArcTradeOrders.Dca.t.sol'
 
 What these tests do not cover: behaviour against real Chainlink feeds, the real 0x contracts, or real USDC (blocklist, proxy upgrades). Cover those with a fork test on mainnet before deploying.
 
-## Application tests (24)
+## Application tests
 
 `tests/trading.test.ts` runs with Bun and covers pure logic:
 
@@ -62,6 +62,24 @@ A mainnet fork is the best place for an end-to-end rehearsal: fork Arc mainnet, 
 ## Lint and typecheck notes
 
 The app is checked with `tsc` and type-aware oxlint. Server and tests use Bun types and are checked by `tsconfig.server.json`, which the `typecheck` script runs after the app check. React purity rules apply: do not call `Date.now()` during render (use `useNowSeconds`) and do not set state synchronously in effects.
+
+## Backend integration tests
+
+`tests/server.integration.test.ts` starts the real backend as a child process (no providers, keeper or indexer, so no network) and checks the abuse controls end to end: rotating `x-forwarded-for` cannot bypass the rate limit, `/metrics` needs the operator token, public `/health` hides the keeper address, and `POST /swaps` needs a running indexer.
+
+## Load test
+
+`scripts/load-test.ts` simulates many wallets asking for prices on a few pairs and reports throughput, latency percentiles, rate-limit hits, cache hit ratio and which provider answered. Start the backend with a high `RATE_LIMIT_SCALE` (every simulated wallet shares one IP), then:
+
+```bash
+bun run scripts/load-test.ts --url http://localhost:3001 --chain 5042002 --requests 800 --wallets 80 --concurrency 40
+```
+
+Reference run on this project (local backend, Arc Testnet, public RPC): 800 requests from 80 wallets finished in 5.8 s (137 requests/s), all 200, 4 upstream lookups (99.5% cache hits), p50 under 1 ms, p95 1.8 s (cold per-wallet allowance reads), max 5.8 s. Mainnet quotes through KyberSwap: 120 requests, 2 upstream lookups, p50 307 ms. Numbers depend on your RPC and network; measure on your own setup.
+
+## Mainnet fork test
+
+`scripts/fork-mainnet-test.ts` runs the order contract against the real KyberSwap router and real Arc pools on a local fork: a real keeper-style fill, plus hostile variants (output sent to the keeper, non-allowlisted target, wrong amount, cancel). It needs a fork client that emulates Arc's native-USDC precompile. Stock anvil reads USDC balances but every USDC transfer reverts, so the script detects this, prints why and exits with code 2. It was verified up to that precheck (fork, deploy, timelock jump, Kyber route and build); the scenarios themselves have not been run. Use Arc's Foundry fork to run them.
 
 ## Testnet harness tests
 

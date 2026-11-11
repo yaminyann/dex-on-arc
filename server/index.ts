@@ -22,6 +22,10 @@ import { keeperStatus, startKeeper } from './keeper'
 import { listProviders } from './automation/providers'
 import { metrics, RateLimiter, TtlCache } from './scale'
 import { isOperator, originAllowed, parseList, resolveClientIp } from './security'
+import { indexerDb, indexerStatus, startIndexer } from './indexer/runtime'
+import { clampLimit, eventCounts, historyFor, swapCount, swapsFor, validOwner } from './indexer/queries'
+import { recordSwap } from './indexer/swaps'
+import { swapTargetsFor } from './gateway/targets'
 
 const port = Number(process.env.API_PORT ?? 3001)
 const PRICE_TTL_MS = Number(process.env.PRICE_CACHE_TTL_MS ?? 4000)
@@ -35,6 +39,7 @@ const limits = {
   price: new RateLimiter(Math.round(90 * scale), 60_000),
   quote: new RateLimiter(Math.round(20 * scale), 60_000),
   other: new RateLimiter(Math.round(240 * scale), 60_000),
+  swaps: new RateLimiter(Math.round(30 * scale), 60_000),
 }
 
 const priceCache = new TtlCache<{ status: number; body: unknown }>(PRICE_TTL_MS, 1000)
@@ -53,10 +58,11 @@ const server = Bun.serve({
   async fetch(req, srv) {
     metrics.http.requests += 1
     const url = new URL(req.url)
-    if (req.method !== 'GET') return json({ error: { code: 'METHOD_NOT_ALLOWED', message: 'GET only' } }, 405)
+    const isSwapReport = req.method === 'POST' && url.pathname === '/swaps'
+    if (req.method !== 'GET' && !isSwapReport) return json({ error: { code: 'METHOD_NOT_ALLOWED', message: 'GET only (POST /swaps reports a confirmed swap)' } }, 405)
 
     const socketIp = srv.requestIP(req)?.address
-    const bucket = url.pathname === '/price' ? 'price' : url.pathname === '/quote' ? 'quote' : 'other'
+    const bucket = url.pathname === '/price' ? 'price' : url.pathname === '/quote' ? 'quote' : isSwapReport ? 'swaps' : 'other'
     const key = resolveClientIp(req.headers.get('x-forwarded-for'), socketIp, trustedHops)
     if (!limits[bucket].allow(key)) {
       metrics.http.rateLimited += 1
@@ -78,6 +84,7 @@ const server = Bun.serve({
         zeroEx: { configured: gateway.status().some((p) => p.id === '0x' && p.configured), chains: [...ZEROEX_SUPPORTED_CHAINS] },
         gateway: { configured: gateway.configured, providers: gateway.status() },
         keeper: view,
+        indexer: operator ? indexerStatus() : { ...indexerStatus(), lastError: indexerStatus().lastError ? 'Indexer reported an error. Details are restricted to operators.' : null },
         automationProviders: listProviders(),
       })
     }
@@ -95,6 +102,41 @@ const server = Bun.serve({
         keeper: metrics.keeper,
         gateway: gateway.status(),
       })
+    }
+
+    if (url.pathname === '/history' || url.pathname === '/swaps' || url.pathname === '/stats') {
+      if (!originAllowed(req.headers.get('origin'), req.headers.get('referer'), allowedOrigins)) {
+        return json({ error: { code: 'ORIGIN_NOT_ALLOWED', message: 'This origin may not use the history service.' } }, 403)
+      }
+      const idx = indexerDb()
+      if (!idx) return json({ error: { code: 'INDEXER_DISABLED', message: 'The indexer is not running on this backend.' } }, 503)
+
+      if (isSwapReport) {
+        // Body is only a transaction hash; everything stored is re-derived from the chain.
+        let body: { chainId?: unknown; hash?: unknown }
+        try {
+          body = (await req.json()) as { chainId?: unknown; hash?: unknown }
+        } catch {
+          return json({ error: { code: 'INPUT_INVALID', message: 'Body must be JSON: { "chainId": number, "hash": "0x..." }' } }, 400)
+        }
+        if (body.chainId !== idx.chainId) return json({ error: { code: 'CHAIN_NOT_INDEXED', message: `This backend indexes chain ${idx.chainId}.` } }, 400)
+        if (typeof body.hash !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(body.hash)) return json({ error: { code: 'INPUT_INVALID', message: 'hash must be a 32-byte hex string' } }, 400)
+        const verdict = await recordSwap(idx.db, idx.reader, { chainId: idx.chainId, hash: body.hash as `0x${string}`, allowedTargets: swapTargetsFor(idx.chainId) })
+        if (!verdict.ok) return json({ error: { code: verdict.code, message: verdict.message } }, verdict.code === 'NOT_FOUND' ? 404 : 422)
+        return json({ recorded: true }, 201)
+      }
+
+      if (url.pathname === '/stats') {
+        return json({ chainId: idx.chainId, indexer: { cursor: indexerStatus().cursor, head: indexerStatus().head, lagBlocks: indexerStatus().lagBlocks }, events: await eventCounts(idx.db, idx.chainId), swaps: await swapCount(idx.db, idx.chainId) })
+      }
+      const owner = url.searchParams.get('owner')
+      if (!validOwner(owner)) return json({ error: { code: 'INPUT_INVALID', message: 'owner must be an address' } }, 400)
+      const limit = clampLimit(url.searchParams.get('limit'))
+      if (url.pathname === '/swaps') return json({ swaps: await swapsFor(idx.db, { chainId: idx.chainId, owner, limit }) })
+      const beforeRaw = url.searchParams.get('before')
+      const before = beforeRaw && /^[0-9]{1,12}$/.test(beforeRaw) ? Number(beforeRaw) : undefined
+      const events = await historyFor(idx.db, { chainId: idx.chainId, owner, limit, before })
+      return json({ events, next: events.length === limit ? events[events.length - 1].blockNumber : null })
     }
 
     if (url.pathname === '/price' || url.pathname === '/quote') {
@@ -143,4 +185,5 @@ setInterval(() => {
     if (p.configured) void alerter.set(`gateway:${p.id}`, p.breaker === 'open', `quote provider ${p.id} is failing and has been taken out of rotation`)
   }
 }, 15_000).unref()
+void startIndexer()
 startKeeper()

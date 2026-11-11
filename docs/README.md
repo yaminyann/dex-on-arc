@@ -28,7 +28,8 @@ Documentation last verified against the code on 2026-11-11. Facts about third-pa
 | --- | --- |
 | [aggregator.md](aggregator.md) | 0x integration, the adapter interface, how to add another provider |
 | [automation-and-keepers.md](automation-and-keepers.md) | Who executes orders, the built-in keeper, running third-party keepers |
-| [backend-api.md](backend-api.md) | HTTP endpoints, caching, rate limits, error codes |
+| [backend-api.md](backend-api.md) | HTTP endpoints, quote gateway, caching, rate limits, error codes |
+| [indexer.md](indexer.md) | Event indexer, database, history and swap-report endpoints |
 | [frontend.md](frontend.md) | Pages, components, data flow, state and theming |
 | [scaling.md](scaling.md) | How the off-chain stack scales, limits, and the contract-level roadmap |
 
