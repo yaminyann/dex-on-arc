@@ -38,5 +38,5 @@ jobs:
       - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: v1.7.1
-      - run: forge build
+      - run: forge build --sizes   # fails if a contract exceeds the 24,576-byte limit
       - run: forge test

@@ -17,7 +17,7 @@
  * stuck order never consumes the budget. State is read directly from the contract (no log
  * scanning), so a restart rebuilds the set from the chain and there is no block-0 backfill.
  */
-import { createPublicClient, createWalletClient, erc20Abi, webSocket, type Address, type Hex, type PublicClient } from 'viem'
+import { createPublicClient, createWalletClient, erc20Abi, parseEventLogs, webSocket, type Address, type Hex, type PublicClient } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { arc, arcTestnet } from 'viem/chains'
 import { ordersAbi } from '../src/trading/ordersAbi'
@@ -130,6 +130,9 @@ interface Ctx {
   gasFloorWei: bigint
   usdc: Address
   feeBps: number
+  /** True when the contract has executeMany (v2) and batching is not disabled. Unknown until the first check. */
+  batch: boolean | undefined
+  batchMax: number
 }
 
 /**
@@ -199,6 +202,8 @@ export function startKeeper(): void {
     gasFloorWei: BigInt(envInt('KEEPER_MIN_GAS_PRICE_GWEI', 20, 0, 10_000)) * 1_000_000_000n,
     usdc: (facts.usdc?.address ?? '0x3600000000000000000000000000000000000000') as Address,
     feeBps: 10,
+    batch: process.env.KEEPER_USE_BATCH === 'false' ? false : undefined,
+    batchMax: envInt('KEEPER_BATCH_MAX', 10, 2, 50),
   }
   status.network = mainnet ? 'arc' : 'arc-testnet'
   status.keeperAddress = account.address
@@ -455,6 +460,35 @@ async function tick(ctx: Ctx) {
   ).filter((p): p is Prepared => p !== null)
   if (prepared.length === 0) return
 
+  // Several ready executions go in one executeMany transaction (v2 contracts), which saves the
+  // per-transaction overhead and one nonce each. Items were already simulated individually above.
+  if (ctx.batch === undefined) {
+    ctx.batch = await publicClient.readContract({ address, abi: ordersAbi, functionName: 'minOrderQuote' }).then(() => true).catch(() => false)
+    status.notes.push(ctx.batch ? 'Contract supports executeMany: ready executions are batched.' : 'Contract has no executeMany (v1): executions are sent one by one.')
+  }
+  const singles = prepared.filter((p) => p.job.fn === 'execute')
+  if (ctx.batch && singles.length >= 2) {
+    const rest = prepared.filter((p) => p.job.fn !== 'execute')
+    const groups: Prepared[][] = []
+    for (let i = 0; i < singles.length; i += ctx.batchMax) groups.push(singles.slice(i, i + ctx.batchMax))
+    prepared.length = 0
+    prepared.push(...rest)
+    for (const group of groups) {
+      if (group.length < 2) {
+        prepared.push(...group)
+        continue
+      }
+      const args = [group.map((g) => g.job.args[0] as bigint), group.map((g) => g.job.args[1] as Address), group.map((g) => g.job.args[2] as Hex)] as const
+      try {
+        const gas = await publicClient.estimateContractGas({ address, abi: ordersAbi, functionName: 'executeMany', args: args as never, account: ctx.wallet.account } as never)
+        metrics.keeper.batches += 1
+        prepared.push({ job: { fn: 'executeMany', args, key: `batch:${group.map((g) => g.job.key).join(',')}`, maintenance: false, members: group.map((g) => g.job) }, gas })
+      } catch {
+        prepared.push(...group) // fall back to individual sends
+      }
+    }
+  }
+
   // Broadcast back to back with explicit nonces (no waiting between sends), then confirm in parallel.
   const fees = applyGasFloor(await publicClient.estimateFeesPerGas().catch(() => undefined), ctx.gasFloorWei)
   const nonce = new NonceTracker(await publicClient.getTransactionCount({ address: ctx.wallet.account!.address, blockTag: 'pending' }))
@@ -489,6 +523,29 @@ async function tick(ctx: Ctx) {
         ok = false
       }
       const { job } = p
+      if (job.members) {
+        // executeMany skips items that cannot execute: count what actually ran from the receipt events.
+        let done = new Set<string>()
+        if (ok) {
+          const receipt = await publicClient.getTransactionReceipt({ hash }).catch(() => null)
+          if (receipt) {
+            const events = parseEventLogs({ abi: ordersAbi, logs: receipt.logs, eventName: 'OrderExecuted' })
+            done = new Set(events.map((e) => `o${e.args.id}`))
+          }
+        }
+        for (const m of job.members) {
+          if (done.has(m.key)) {
+            status.executed += 1
+            metrics.keeper.executed += 1
+            ctx.backoff.clear(m.key)
+          } else {
+            metrics.keeper.failedExecutions += 1
+            ctx.backoff.fail(m.key)
+          }
+        }
+        if (!ok) metrics.keeper.txFailed += 1
+        return
+      }
       if (job.maintenance) {
         metrics.keeper.maintenanceCalls += 1
         if (!ok) metrics.keeper.txFailed += 1
@@ -508,7 +565,7 @@ async function tick(ctx: Ctx) {
   )
 }
 
-type JobFn = 'execute' | 'executeDca' | 'expireOrder' | 'activateStop' | 'pokeTrailing'
+type JobFn = 'execute' | 'executeMany' | 'executeDca' | 'expireOrder' | 'activateStop' | 'pokeTrailing'
 
 interface Job {
   fn: JobFn
@@ -517,6 +574,8 @@ interface Job {
   maintenance: boolean
   /** Expected keeper fee in 6-decimal USDC units (executions only). */
   feeUsdc6?: bigint
+  /** For executeMany: the individual executions it carries. */
+  members?: Job[]
 }
 
 interface Prepared {

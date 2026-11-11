@@ -136,3 +136,23 @@ Not covered by the suite: real DEX routers, real Chainlink feeds, fee-on-transfe
 7. **Timelock and admin:** queue/apply/cancel edge cases, entries that never expire, instant-disable semantics (disabling the quote token), `Ownable2Step`, `renounceOwnership`, `pause` behaviour.
 8. **Economic review:** keeper/MEV extraction within slippage bands, griefing and spam economics, fee design.
 9. **Event completeness for monitoring** (especially `ConfigQueued`) and indexer assumptions.
+
+---
+
+## 9. v2 changes (unaudited)
+
+`ArcTradeOrders` v2 (Arc Testnet only) closes several items from the limitations list above. None of this has had an independent review.
+
+| Earlier limitation | v2 |
+| --- | --- |
+| `renounceOwnership` available | Disabled (`RenounceDisabled`) |
+| `ConfigQueued` does not say what is queued | The event includes subject, feed, staleness and flags |
+| Queued entries never expire | `applyConfig` is only valid until `eta + 14 days` |
+| Oracle round metadata not checked | `answeredInRound < roundId` is rejected as stale |
+| Unbounded per-account id arrays make views expensive | Paged views and batch readers added (the old views remain) |
+| Anyone can create tiny orders and bloat indexes | Owner-set minimum order size (default 0) |
+| One transaction per execution | `executeMany` with per-item isolation |
+
+New surface to review: `executeMany` and `executeFor` (self-call pattern; `executeFor` is only reachable from the contract itself, and the batch holds the reentrancy lock, so a swap target calling it gets `NotSelf`), the keeper address now passed explicitly into the execution routine (fees go to the batch caller, never to `address(this)` or the target), and `setMinOrderQuote` as a new owner lever (it can block new orders, never move escrow). The v2 test suite adds 16 tests, including a hostile target that tries to re-enter `executeFor`.
+
+Remaining gaps: no deviation guard or second oracle, no min/max answer bounds, cached decimals, no sequencer-style liveness signal, owner can still pause or disable instantly.

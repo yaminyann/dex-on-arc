@@ -52,6 +52,8 @@ Changing a `VITE_` variable needs a dev-server restart.
 | --- | --- | --- |
 | `KEEPER_ENABLED` | off | `true` starts the keeper loop |
 | `KEEPER_WS_URL` | none | WebSocket RPC (for example `wss://rpc.testnet.arc.io`). New orders and DCA plans end the idle sleep early; polling stays as the fallback |
+| `KEEPER_USE_BATCH` | on | Set `false` to send executions one by one even on a v2 contract |
+| `KEEPER_BATCH_MAX` | `10` | Most executions per `executeMany` transaction |
 | `KEEPER_MIN_TICK_MS` | `1000` | Minimum gap between ticks, so a burst of events cannot hammer the RPC |
 | `TESTNET_DEPLOYER_PRIVATE_KEY` | none | Throwaway Arc Testnet key used by the harness scripts (`server/testnet/*`). Never a `VITE_` variable, never a key that held real funds |
 | `KEEPER_PRIVATE_KEY` | none | The operator's own funded key. Pays gas, receives the keeper fee. Use a dedicated low-balance key |

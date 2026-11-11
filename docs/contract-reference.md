@@ -633,3 +633,19 @@ stateDiagram-v2
 | Views | No (`checkOrder` / `checkDca` report code 5) |
 
 Timelock: `queueTokenConfig` and `queueSwapTarget` are the only way to add or change a feed or to allow a target. They take effect no earlier than `configDelay` after queueing and must be applied explicitly by the owner (there is no expiry on a queued entry). Disabling a feed or a target, lowering the fee, and pausing are immediate because they only reduce risk or functionality and cannot take escrow.
+
+## v2 additions (unaudited, deployed on Arc Testnet only)
+
+| Addition | Behaviour |
+| --- | --- |
+| `setMinOrderQuote(uint256)` / `minOrderQuote` | Owner-set minimum order size in quote-token units (0 disables; capped at 10,000 whole quote tokens). Enforced at creation: buy orders and DCA use the escrowed quote amount, sell orders the oracle value of the base amount. Reverts `OrderTooSmall(value, minimum)`. Only affects new orders, so it can change instantly; it can block new orders like `pause` but never touches escrow |
+| `renounceOwnership()` | Always reverts `RenounceDisabled` (a renounce would freeze configuration, and while paused disable execution for good) |
+| `ConfigQueued(changeId, eta, subject, feed, maxStaleness, isToken, allowed)` | The event now carries what is queued, so users and monitors can see it |
+| Config expiry | `applyConfig` reverts `ConfigExpired` after `eta + 14 days`. Expired entries can still be cancelled |
+| Oracle round check | A feed answer with `answeredInRound < roundId` is rejected as `StalePrice` |
+| `orderCount`, `getOrderIdsPage(account, offset, limit)`, `dcaCount`, `getDcaIdsPage`, `getOrders(ids)` | Paged and batched reads so heavy accounts no longer need the unbounded id arrays |
+| `executeMany(ids, targets, datas)` | Executes many orders in one transaction. An item that cannot execute is skipped and logged as `BatchItemFailed(id)`; the caller earns every fee. Per-item isolation uses an external self-call (`executeFor`, callable only by the contract itself); the batch holds the reentrancy lock, so a swap target cannot re-enter. Reverts on array length mismatch; respects `pause` |
+
+Size: runtime bytecode is 23,778 bytes against the 24,576-byte limit. An earlier draft that also batched DCA and returned plan batches exceeded the limit (found when the testnet deployment failed at gas estimation), so those were removed. DCA batching can return when something else is trimmed.
+
+Still open (needs design and audit): a second oracle or deviation guard, partial fills, buy-side stops, multiple quote tokens, per-order swap target selection.

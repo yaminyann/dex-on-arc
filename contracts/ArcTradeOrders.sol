@@ -30,12 +30,17 @@ interface IArcTradeErrors {
 ///      There is no native-token handling, standing allowance, rescue, or owner withdrawal.
 ///      Users can always cancel orders or cancel DCA plans and withdraw escrow during the config delay window.
 ///      Production deployments should use a configuration delay of 48 hours or more.
+///      v2 additions (unaudited): owner-set minimum order size, queued configuration that expires, rich
+///      ConfigQueued events, oracle round completeness check, paged views, batch order execution, no renounce.
+///      Contract size is close to the 24,576-byte limit: check `forge build --sizes` before adding code.
 contract ArcTradeOrders is Ownable2Step, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     uint256 private constant BPS = 10_000;
     uint256 private constant WAD = 1e18;
     uint256 private constant MAX_USER_PRICE = type(uint128).max;
+    /// @dev A queued configuration change can only be applied inside [eta, eta + CONFIG_GRACE].
+    uint256 private constant CONFIG_GRACE = 14 days;
 
     enum Side { BUY, SELL }
     enum OrderType { LIMIT, STOP_LOSS, TAKE_PROFIT, STOP_LIMIT, TRAILING_STOP, OCO }
@@ -112,6 +117,8 @@ contract ArcTradeOrders is Ownable2Step, Pausable, ReentrancyGuard {
     mapping(bytes32 => PendingConfig) private _pendingConfigs;
     /// @notice Keeper fee on swap output in basis points. Starts at 0.10% and can only ever be lowered.
     uint16 public keeperFeeBps = 10;
+    /// @notice Minimum order size in quote-token smallest units (0 disables). Keeps dust orders out so keepers are paid for their gas.
+    uint256 public minOrderQuote;
     uint256 public nextOrderId = 1;
     uint256 public nextDcaId = 1;
     mapping(address => TokenConfig) public tokenConfigs;
@@ -149,10 +156,17 @@ contract ArcTradeOrders is Ownable2Step, Pausable, ReentrancyGuard {
     error InvalidDelay();
     error ConfigNotReady();
     error ConfigUnknown();
+    error ConfigExpired();
+    error OrderTooSmall(uint256 value, uint256 minimum);
+    error RenounceDisabled();
+    error NotSelf();
+    error BatchLengthMismatch();
 
     event TokenConfigured(address indexed token, address indexed feed, uint8 feedDecimals, uint8 tokenDecimals, uint32 maxStaleness);
     event SwapTargetSet(address indexed target, bool allowed);
-    event ConfigQueued(bytes32 indexed changeId, uint256 eta);
+    event ConfigQueued(bytes32 indexed changeId, uint256 eta, address subject, address feed, uint32 maxStaleness, bool isToken, bool allowed);
+    event MinOrderQuoteSet(uint256 minimum);
+    event BatchItemFailed(uint256 indexed id);
     event ConfigCancelled(bytes32 indexed changeId);
     event StopActivated(uint256 indexed id, uint256 price);
     event KeeperFeeSet(uint16 feeBps);
@@ -195,6 +209,7 @@ contract ArcTradeOrders is Ownable2Step, Pausable, ReentrancyGuard {
         PendingConfig memory pending = _pendingConfigs[changeId];
         if (pending.eta == 0) revert ConfigUnknown();
         if (block.timestamp < pending.eta) revert ConfigNotReady();
+        if (block.timestamp > pending.eta + CONFIG_GRACE) revert ConfigExpired();
         delete _pendingConfigs[changeId];
         if (pending.isToken) _setToken(pending.subject, pending.feed, pending.maxStaleness);
         else _setSwapTarget(pending.subject, pending.allowed);
@@ -228,7 +243,7 @@ contract ArcTradeOrders is Ownable2Step, Pausable, ReentrancyGuard {
     function _queueConfig(PendingConfig memory pending) private returns (bytes32 changeId) {
         changeId = keccak256(abi.encode(address(this), ++_configNonce, pending));
         _pendingConfigs[changeId] = pending;
-        emit ConfigQueued(changeId, pending.eta);
+        emit ConfigQueued(changeId, pending.eta, pending.subject, pending.feed, pending.maxStaleness, pending.isToken, pending.allowed);
     }
 
     /// @notice Registers a feed, or disables new usage with a zero feed without blocking refunds.
@@ -263,6 +278,19 @@ contract ArcTradeOrders is Ownable2Step, Pausable, ReentrancyGuard {
         if (feeBps > keeperFeeBps) revert InvalidParameters();
         keeperFeeBps = feeBps;
         emit KeeperFeeSet(feeBps);
+    }
+
+    /// @notice Sets the minimum order size in quote-token units. It only affects orders created afterwards,
+    ///         so it can be changed instantly: it can block new orders (like pause) but never touches escrow.
+    function setMinOrderQuote(uint256 minimum) external onlyOwner nonReentrant {
+        if (minimum > 10_000 * (10 ** uint256(IERC20Metadata(quote).decimals()))) revert InvalidParameters();
+        minOrderQuote = minimum;
+        emit MinOrderQuoteSet(minimum);
+    }
+
+    /// @dev Renouncing would freeze configuration for good and, while paused, disable execution forever.
+    function renounceOwnership() public pure override {
+        revert RenounceDisabled();
     }
 
     /// @notice Stops new escrow and executions; refunds and plan management remain available.
@@ -313,6 +341,7 @@ contract ArcTradeOrders is Ownable2Step, Pausable, ReentrancyGuard {
         if (p.orderType != OrderType.LIMIT && p.side != Side.SELL) revert InvalidParameters();
         (uint256 price,) = currentPrice(p.base);
         _validateOrderPrices(p, price);
+        _checkMinimum(p.side == Side.BUY ? p.amountIn : quoteForBase(p.base, p.amountIn, price));
         id = nextOrderId++;
         Order storage o = _orders[id];
         o.owner = msg.sender;
@@ -335,6 +364,33 @@ contract ArcTradeOrders is Ownable2Step, Pausable, ReentrancyGuard {
 
     /// @notice Executes an open triggered order using keeper-provided calldata and net output checks.
     function execute(uint256 id, address target, bytes calldata data) external nonReentrant whenNotPaused {
+        _execute(id, target, data, msg.sender);
+    }
+
+    /// @notice Executes many orders in one transaction. An item that cannot execute is skipped (and logged),
+    ///         not reverted, so one stuck order never blocks the batch. The caller earns each fee.
+    /// @return executed How many items were executed.
+    function executeMany(uint256[] calldata ids, address[] calldata targets, bytes[] calldata datas)
+        external nonReentrant whenNotPaused returns (uint256 executed)
+    {
+        if (ids.length != targets.length || ids.length != datas.length) revert BatchLengthMismatch();
+        for (uint256 i = 0; i < ids.length; ++i) {
+            try this.executeFor(ids[i], targets[i], datas[i], msg.sender) {
+                ++executed;
+            } catch {
+                emit BatchItemFailed(ids[i]);
+            }
+        }
+    }
+
+    /// @dev Only callable by this contract (through executeMany) so a revert can be caught per item.
+    ///      Reentrancy protection comes from executeMany holding the lock; no one else can call this.
+    function executeFor(uint256 id, address target, bytes calldata data, address keeper) external {
+        if (msg.sender != address(this)) revert NotSelf();
+        _execute(id, target, data, keeper);
+    }
+
+    function _execute(uint256 id, address target, bytes calldata data, address keeper) private {
         Order storage o = _openOrder(id);
         if (block.timestamp >= o.expiry) revert IArcTradeErrors.OrderExpired(id);
         (uint256 price,) = currentPrice(o.base);
@@ -356,8 +412,8 @@ contract ArcTradeOrders is Ownable2Step, Pausable, ReentrancyGuard {
             ? _realizedPrice(o.base, net, o.amountIn)
             : _realizedPrice(o.base, o.amountIn, net);
         IERC20(tokenOut).safeTransfer(o.owner, net);
-        if (fee != 0) IERC20(tokenOut).safeTransfer(msg.sender, fee);
-        emit OrderExecuted(id, o.owner, msg.sender, o.amountIn, net, fee, o.executionPrice);
+        if (fee != 0) IERC20(tokenOut).safeTransfer(keeper, fee);
+        emit OrderExecuted(id, o.owner, keeper, o.amountIn, net, fee, o.executionPrice);
     }
 
     /// @notice Permanently activates an open stop-limit order when its stop condition is met.
@@ -404,8 +460,22 @@ contract ArcTradeOrders is Ownable2Step, Pausable, ReentrancyGuard {
         return _orders[id];
     }
 
-    /// @notice Lists all order IDs created by an account.
+    /// @notice Lists all order IDs created by an account. Unbounded for heavy users: prefer the paged view.
     function getOrderIds(address account) external view returns (uint256[] memory) { return _orderIds[account]; }
+
+    /// @notice Number of orders an account has created.
+    function orderCount(address account) external view returns (uint256) { return _orderIds[account].length; }
+
+    /// @notice A page of an account's order IDs, oldest first. Out-of-range pages are empty.
+    function getOrderIdsPage(address account, uint256 offset, uint256 limit) external view returns (uint256[] memory page) {
+        return _page(_orderIds[account], offset, limit);
+    }
+
+    /// @notice Reads many orders in one call. Unknown ids come back as empty structs (owner is the zero address).
+    function getOrders(uint256[] calldata ids) external view returns (Order[] memory out) {
+        out = new Order[](ids.length);
+        for (uint256 i = 0; i < ids.length; ++i) out[i] = _orders[ids[i]];
+    }
 
     /// @notice Previews trigger and minimum output, using a virtual higher trailing peak.
     /// @dev External so checkOrder can catch feed failures and malformed oracle responses.
@@ -439,6 +509,7 @@ contract ArcTradeOrders is Ownable2Step, Pausable, ReentrancyGuard {
         }
         _validateSlippage(maxSlippageBps);
         currentPrice(base);
+        _checkMinimum(amountPerBuy);
         uint256 budget = amountPerBuy * numBuys;
         id = nextDcaId++;
         Dca storage d = _dcas[id];
@@ -459,6 +530,10 @@ contract ArcTradeOrders is Ownable2Step, Pausable, ReentrancyGuard {
 
     /// @notice Executes one due purchase, paying the keeper in base tokens from the output.
     function executeDca(uint256 id, address target, bytes calldata data) external nonReentrant whenNotPaused {
+        _executeDca(id, target, data, msg.sender);
+    }
+
+    function _executeDca(uint256 id, address target, bytes calldata data, address keeper) private {
         Dca storage d = _existingDca(id);
         if (d.status != DcaStatus.ACTIVE || d.budgetRemaining == 0) revert DcaNotActive();
         if (block.timestamp < d.nextExecution) revert DcaNotDue();
@@ -475,8 +550,8 @@ contract ArcTradeOrders is Ownable2Step, Pausable, ReentrancyGuard {
         d.nextExecution = _time(scheduled <= block.timestamp ? block.timestamp + d.interval : scheduled);
         if (d.budgetRemaining == 0) d.status = DcaStatus.COMPLETED;
         IERC20(d.base).safeTransfer(d.owner, net);
-        if (fee != 0) IERC20(d.base).safeTransfer(msg.sender, fee);
-        emit DcaExecuted(id, d.owner, msg.sender, amountIn, net, fee, d.nextExecution);
+        if (fee != 0) IERC20(d.base).safeTransfer(keeper, fee);
+        emit DcaExecuted(id, d.owner, keeper, amountIn, net, fee, d.nextExecution);
         if (d.status == DcaStatus.COMPLETED) emit DcaCompleted(id);
     }
 
@@ -514,8 +589,16 @@ contract ArcTradeOrders is Ownable2Step, Pausable, ReentrancyGuard {
         return _dcas[id];
     }
 
-    /// @notice Lists all recurring plan IDs created by an account.
+    /// @notice Lists all recurring plan IDs created by an account. Unbounded for heavy users: prefer the paged view.
     function getDcaIds(address account) external view returns (uint256[] memory) { return _dcaIds[account]; }
+
+    /// @notice Number of recurring plans an account has created.
+    function dcaCount(address account) external view returns (uint256) { return _dcaIds[account].length; }
+
+    /// @notice A page of an account's plan IDs, oldest first. Out-of-range pages are empty.
+    function getDcaIdsPage(address account, uint256 offset, uint256 limit) external view returns (uint256[] memory page) {
+        return _page(_dcaIds[account], offset, limit);
+    }
 
     /// @notice Previews a plan's oracle price and net minimum; reverts for unavailable oracle data.
     function previewDca(uint256 id) external view returns (uint256 price18, uint256 minOut) {
@@ -542,10 +625,12 @@ contract ArcTradeOrders is Ownable2Step, Pausable, ReentrancyGuard {
         if (c.feed == address(0)) revert TokenNotSupported(token);
         int256 answer;
         try AggregatorV3Interface(c.feed).latestRoundData() returns (
-            uint80, int256 a, uint256, uint256 timestamp, uint80
+            uint80 roundId, int256 a, uint256, uint256 timestamp, uint80 answeredInRound
         ) {
             answer = a;
             updatedAt = timestamp;
+            // An answer carried over from an earlier round is not a fresh price.
+            if (answeredInRound < roundId) revert StalePrice(token);
         } catch { revert InvalidPrice(token); }
         if (answer <= 0) revert InvalidPrice(token);
         if (updatedAt == 0 || updatedAt > block.timestamp || block.timestamp - updatedAt > c.maxStaleness) {
@@ -677,6 +762,19 @@ contract ArcTradeOrders is Ownable2Step, Pausable, ReentrancyGuard {
     }
 
     function _pow10(uint8 exponent) private pure returns (uint256) { return 10 ** uint256(exponent); }
+
+    function _checkMinimum(uint256 valueInQuote) private view {
+        uint256 minimum = minOrderQuote;
+        if (valueInQuote < minimum) revert OrderTooSmall(valueInQuote, minimum);
+    }
+
+    function _page(uint256[] storage ids, uint256 offset, uint256 limit) private view returns (uint256[] memory page) {
+        uint256 total = ids.length;
+        if (offset >= total || limit == 0) return new uint256[](0);
+        uint256 end = offset + limit > total ? total : offset + limit;
+        page = new uint256[](end - offset);
+        for (uint256 i = offset; i < end; ++i) page[i - offset] = ids[i];
+    }
 
     function _time(uint256 timestamp) private pure returns (uint40) {
         if (timestamp > type(uint40).max) revert TimestampOverflow();

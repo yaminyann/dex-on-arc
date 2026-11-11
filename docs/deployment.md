@@ -5,7 +5,8 @@
 | Item | Value |
 | --- | --- |
 | Network | Arc Testnet (5042002) |
-| Contract | Superseded: `0x7da5f7d0cf7f5c751dfed545ebf72400c87b724e` (shared owner, cannot register feeds). The current testnet deployment is the harness contract in [testnet-harness.md](testnet-harness.md) |
+| Contract (current testnet) | v2 at `0xa83efe842010dbd470dfe7cc210d61c4edd908aa` (harness, owner = deployer key, unaudited). See [testnet-harness.md](testnet-harness.md) |
+| Contract (superseded) | Superseded: `0x7da5f7d0cf7f5c751dfed545ebf72400c87b724e` (shared owner, cannot register feeds). The current testnet deployment is the harness contract in [testnet-harness.md](testnet-harness.md) |
 | Constructor | owner = the shared platform deployer wallet, quote = USDC `0x3600000000000000000000000000000000000000`, configDelay = 3600 s |
 | Deployed | 2026-11-11 |
 

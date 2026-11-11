@@ -51,7 +51,7 @@ contract ArcTradeOrdersConfigTest is ArcTradeOrdersTestBase {
 
     function test_QueueTokenConfig_StoresEtaAndEmits() public {
         vm.expectEmit(false, false, false, true, address(arc));
-        emit ArcTradeOrders.ConfigQueued(bytes32(0), block.timestamp + DELAY);
+        emit ArcTradeOrders.ConfigQueued(bytes32(0), block.timestamp + DELAY, address(wbtc), address(btcFeed), STALE, true, false);
         vm.prank(owner);
         bytes32 id = arc.queueTokenConfig(address(wbtc), address(btcFeed), STALE);
         assertEq(arc.pendingConfigEta(id), block.timestamp + DELAY);

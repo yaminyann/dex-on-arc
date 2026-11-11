@@ -12,13 +12,14 @@ Non-custodial trading terminal on Arc: market swaps through a quote gateway (0x,
 
 - Frontend: React 18, Vite, TypeScript, Tailwind (class dark mode, CSS variable tokens in `src/index.css`)
 - Web3: wagmi v2, viem, ConnectKit
-- Contracts: Solidity + Foundry in `contracts/`, tests in `contracts/test/` (175 tests, run with Foundry v1.7.1)
+- Contracts: Solidity + Foundry in `contracts/`, tests in `contracts/test/` (191 tests, run with Foundry v1.7.1)
 - Backend: `server/` (Bun). `bun run server`. Vite proxies `/api` to :3001. Quote gateway in `server/gateway/`, event indexer in `server/indexer/` (SQLite or Postgres via Bun SQL)
 - Chain: Arc Testnet (5042002) default; Arc mainnet (5042) supported by config
 
 ## Deployed contracts
 
-- ArcTradeOrders on Arc Testnet (harness deployment, current): `0x259d5810aadfde23ac193dce84e6462025cea02c`, saved as `VITE_ORDERS_ADDRESS_ARC_TESTNET` and in `src/trading/testnet-harness.json`. The earlier `0x7da5f7d0cf7f5c751dfed545ebf72400c87b724e` (shared platform owner) is superseded and unused.
+- ArcTradeOrders **v2** on Arc Testnet (current, unaudited): `0xa83efe842010dbd470dfe7cc210d61c4edd908aa`, saved as `VITE_ORDERS_ADDRESS_ARC_TESTNET` and in `src/trading/testnet-harness.json`. Superseded: v1 harness `0x259d5810aadfde23ac193dce84e6462025cea02c` (kept as `ordersV1`) and `0x7da5f7d0cf7f5c751dfed545ebf72400c87b724e` (shared platform owner).
+- v2 adds: owner-set minimum order size, expiring queued config, rich `ConfigQueued`, oracle round check, paged views, `executeMany`, no `renounceOwnership`. Runtime size is 23,778 B of the 24,576 B limit: run `forge build --sizes` before adding code.
 - No mainnet deployment. Mainnet is deployed and operated by the user.
 
 ## Verified Arc facts (researched 2026-11-11)

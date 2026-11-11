@@ -2,8 +2,8 @@
   "network": "arc-testnet",
   "chainId": 5042002,
   "deployer": "0x43aBbA38cCfbfa7D0044104681542347dfCB34F7",
-  "orders": "0x259d5810aadfde23ac193dce84e6462025cea02c",
-  "ordersDeployTx": "0xe4502544be333a434ce839a274e24df077c49259a9872da0de6d38c2bddb3750",
+  "orders": "0xa83efe842010dbd470dfe7cc210d61c4edd908aa",
+  "ordersDeployTx": "0x986e8257cf2e63f5f4edba97509bb97ea757bad63ba07605becb1a2ce0f36fa3",
   "router": "0x6812943fc8cf6acf9a098cbabb2277112d77a93f",
   "usdcFeed": "0x956f192a631cb9033d50eb2e1ffc02a200eb0dad",
   "assets": [
@@ -41,35 +41,37 @@
   "queuedConfig": [
     {
       "label": "USDC feed",
-      "changeId": "0xd3b43db1ec17bac4e08b576a31d4d00eec17e8225ba5760c3a731470e46ce200",
-      "eta": 1794413342
+      "changeId": "0xa3358b3dc17c72ac81aed0cdc5834680b01ef032823d2577630a304c9f032b18",
+      "eta": 1794430972
     },
     {
       "label": "tBTC feed",
-      "changeId": "0x2fbc8cf7b9b0c06daed1d46dc4fbaf7b13dce29353f3b7bd95af980dd1c3dc1a",
-      "eta": 1794413364
+      "changeId": "0xbdcafb275a232347fb98251912cca1c58b248536ee58671f34326f52c9887568",
+      "eta": 1794430973
     },
     {
       "label": "tETH feed",
-      "changeId": "0xd302378de939c1f968e75c673a9ceb85c4c60a8d474c3b9d5f3e59aee9d4d689",
-      "eta": 1794413385
+      "changeId": "0x406a4bf56982c84062a8aa2fa3353c552b5579cdb65df313cbe7ccb45f90f827",
+      "eta": 1794430976
     },
     {
       "label": "tSOL feed",
-      "changeId": "0x85b4efd0b6485486d8750f3a5d015b08e2807bfc2bd71baf165133ab6818086f",
-      "eta": 1794413406
+      "changeId": "0x9ae256e9892b44db7e8972427f60d438d65a0a7896e98730a7337c8d9422d292",
+      "eta": 1794430980
     },
     {
       "label": "swap router",
-      "changeId": "0x939d39656e5a7c301f36a12317335de62c6165938194103059881b01f2233534",
-      "eta": 1794413411
+      "changeId": "0x6e328c89dfdc4e680b1569903546f9b3cd391b980c5b6a23e90c6a26d2fa5ec0",
+      "eta": 1794430981
     },
     {
       "label": "swap router B",
-      "changeId": "0x7cd63600a7ffe5cfd966e5f5c445d318e534e4f8291c1bf5ce067ea62bbe3ed0",
-      "eta": 1794429556
+      "changeId": "0xf14f77dcd148444b844d738803b36eab9720357bf85a1fba07e43e403452c904",
+      "eta": 1794430982
     }
   ],
-  "deployedAt": "2026-11-11T15:10:18.933Z",
-  "routerB": "0x5efcfe5aecbf618c149288496289d305edf107bd"
+  "deployedAt": "2026-11-11T20:03:04.189Z",
+  "routerB": "0x5efcfe5aecbf618c149288496289d305edf107bd",
+  "ordersV1": "0x259d5810aadfde23ac193dce84e6462025cea02c",
+  "ordersV1DeployTx": "0xe4502544be333a434ce839a274e24df077c49259a9872da0de6d38c2bddb3750"
 }

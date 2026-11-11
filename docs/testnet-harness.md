@@ -68,6 +68,12 @@ KEEPER_ENABLED=true KEEPER_PRIVATE_KEY=$TESTNET_DEPLOYER_PRIVATE_KEY bun run ser
 
 On testnet the keeper fills swaps through the quote gateway, which serves the test routers as providers (`test-router`, `test-router-b`). Limit them with `GATEWAY_PROVIDERS`.
 
+## v2 order contract on testnet
+
+`server/testnet/deploy-orders-v2.ts` deploys the v2 `ArcTradeOrders` (see [contract-reference.md](contract-reference.md#v2-additions-unaudited-deployed-on-arc-testnet-only)) beside the existing harness, queues the same feeds and both test routers on it (timelocked), sets a 0.1 USDC minimum order size, and records the new address in `src/trading/testnet-harness.json` (the previous deployment is kept as `ordersV1`). After the delay run `apply-config.ts`. `.env` points `VITE_ORDERS_ADDRESS_ARC_TESTNET` at it.
+
+The live end-to-end test gained v2 scenarios: dust rejection, paged views agreeing with the full id list, and several ready orders executed through one keeper `executeMany` transaction. At the end it sweeps the trader wallet's leftover USDC back to the deployer, so repeated runs only cost gas (testnet USDC comes from a captcha-gated faucet and is scarce).
+
 ## Second router (rehearsing an extra aggregator)
 
 `server/testnet/deploy-router-b.ts` deploys a second `TestSwapRouter`, queues it as a swap target on the order contract and funds it. After the config delay, `apply-config.ts` allowlists it. This is the testnet rehearsal of what mainnet needs for every additional aggregator router (KyberSwap, 0x): an onchain, timelocked allowlist entry that keepers can then use. Router B pays outputs from its own balance (the test tokens have a single minter, router A), so keep test sizes small.

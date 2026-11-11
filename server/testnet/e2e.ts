@@ -110,7 +110,7 @@ async function main() {
 
   console.log(`trader ${trader.address}`)
   // Gas for the trader (USDC is the native gas token on Arc).
-  const gasHash = await deployerWallet.sendTransaction({ to: trader.address, value: parseUnits('1.5', 18) })
+  const gasHash = await deployerWallet.sendTransaction({ to: trader.address, value: parseUnits('1.1', 18) })
   await pub.waitForTransactionReceipt({ hash: gasHash })
   for (const s of ['tBTC', 'tETH', 'tSOL']) await send(traderWallet, t(s), faucetAbi as unknown as Abi, 'faucet', [])
   for (const s of ['tBTC', 'tETH', 'tSOL']) await send(traderWallet, t(s), erc20Abi as unknown as Abi, 'approve', [ORDERS, 2n ** 255n])
@@ -236,7 +236,7 @@ async function main() {
   await scenario('DCA buys on schedule, then pause, resume and cancel refund the rest', async () => {
     const per = parseUnits('0.4', 6)
     const before = await bal(USDC, trader.address)
-    await send(traderWallet, ORDERS, ordersAbi as unknown as Abi, 'createDca', [t('tBTC'), per, 3, 3600, 0, 300, 0n])
+    await send(traderWallet, ORDERS, ordersAbi as unknown as Abi, 'createDca', [t('tBTC'), per, 2, 3600, 0, 300, 0n])
     const id = (await pub.readContract({ address: ORDERS, abi: ordersAbi, functionName: 'nextDcaId' })) - 1n
     const d = await waitFor('first dca buy', async () => {
       const x = await pub.readContract({ address: ORDERS, abi: ordersAbi, functionName: 'getDca', args: [id] })
@@ -263,6 +263,64 @@ async function main() {
     if (got <= 0n) throw new Error('no tETH received')
     return `0.3 USDC bought ${Number(got) / 1e18} tETH`
   })
+
+  // ---- v2 contract features -------------------------------------------------------------------------
+
+  await scenario('v2: an order below the minimum size is rejected', async () => {
+    const min = await pub.readContract({ address: ORDERS, abi: ordersAbi, functionName: 'minOrderQuote' })
+    if (min === 0n) return 'skipped: this deployment has no minimum order size set'
+    const tiny = min / 2n
+    try {
+      await createOrder({ base: t('tETH'), side: Side.BUY, type: Type.LIMIT, amountIn: tiny, trigger: (await price18(t('tETH'))) * 2n })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      if (!/OrderTooSmall|too small/i.test(msg)) throw new Error(`rejected, but not as OrderTooSmall: ${msg.split('\n')[0]}`)
+      return `${Number(tiny) / 1e6} USDC rejected (minimum ${Number(min) / 1e6})`
+    }
+    throw new Error('a dust order was accepted')
+  })
+
+  await scenario('v2: paged views agree with the full id list', async () => {
+    const all = await pub.readContract({ address: ORDERS, abi: ordersAbi, functionName: 'getOrderIds', args: [trader.address] })
+    const count = await pub.readContract({ address: ORDERS, abi: ordersAbi, functionName: 'orderCount', args: [trader.address] })
+    const page = await pub.readContract({ address: ORDERS, abi: ordersAbi, functionName: 'getOrderIdsPage', args: [trader.address, 1n, 3n] })
+    if (BigInt(all.length) !== count) throw new Error(`count ${count} vs ${all.length} ids`)
+    if (page.length !== Math.min(3, all.length - 1) || page.some((id, i) => id !== all[i + 1])) throw new Error('page does not match the id list')
+    const orders = await pub.readContract({ address: ORDERS, abi: ordersAbi, functionName: 'getOrders', args: [[...page]] })
+    if (orders.length !== page.length || orders.some((o) => o.owner.toLowerCase() !== trader.address.toLowerCase())) throw new Error('getOrders mismatch')
+    return `${all.length} orders, page of ${page.length} matches`
+  })
+
+  await scenario('v2: a keeper batches several ready orders into one executeMany transaction', async () => {
+    const now = await price18(t('tETH'))
+    const trigger = (now * 103n) / 100n
+    const ids: bigint[] = []
+    for (let i = 0; i < 3; i++) ids.push(await createOrder({ base: t('tETH'), side: Side.SELL, type: Type.LIMIT, amountIn: amtEth, trigger }))
+    await setFeedPct(f('tETH'), 6)
+    await waitFor('all three batch orders executed', async () => {
+      const orders = await Promise.all(ids.map((id) => getOrder(id)))
+      return orders.every((o) => o.status === Status.EXECUTED) ? true : null
+    })
+    const logs = await pub.getContractEvents({ address: ORDERS, abi: ordersAbi, eventName: 'OrderExecuted', args: { owner: trader.address }, fromBlock: (await pub.getBlockNumber()) - 3_000n })
+    const byTx = new Map<string, number>()
+    for (const l of logs) if (ids.includes(l.args.id as bigint)) byTx.set(l.transactionHash, (byTx.get(l.transactionHash) ?? 0) + 1)
+    const largest = Math.max(...byTx.values())
+    if (largest < 2) throw new Error(`executed in ${byTx.size} separate transactions; no batch was used (is the keeper on a v2 contract with batching on?)`)
+    return `${ids.length} orders executed in ${byTx.size} transaction(s), ${largest} in a single executeMany`
+  })
+
+  // Return what is left to the deployer so repeated runs only cost gas (testnet USDC is scarce).
+  try {
+    const left = await pub.getBalance({ address: trader.address })
+    const reserve = parseUnits('0.02', 18)
+    if (left > reserve) {
+      const hash = await traderWallet.sendTransaction({ to: deployer.address, value: left - reserve })
+      await pub.waitForTransactionReceipt({ hash })
+      console.log(`swept ${Number(left - reserve) / 1e18} USDC back to the deployer`)
+    }
+  } catch (e) {
+    console.log(`sweep skipped: ${e instanceof Error ? e.message.split('\n')[0] : String(e)}`)
+  }
 
   const failed = results.filter((r) => !r.ok)
   console.log(`\n${results.length - failed.length}/${results.length} scenarios passed`)

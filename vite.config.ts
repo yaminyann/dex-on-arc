@@ -34,6 +34,22 @@ export default defineConfig({
       'vite-plugin-node-polyfills/shims/process',
     ],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Split heavy, rarely-changing libraries so the app code stays small and browsers cache them separately.
+        manualChunks(id: string) {
+          if (!id.includes('node_modules')) return undefined
+          if (id.includes('lightweight-charts')) return 'charts'
+          if (id.includes('@circle-fin')) return 'circle'
+          if (/node_modules[\/](wagmi|@wagmi|connectkit|@tanstack)[\/]/.test(id)) return 'wallet-ui'
+          if (/node_modules[\/](viem|abitype|ox|@noble|@scure)[\/]/.test(id)) return 'viem'
+          if (/node_modules[\/](react|react-dom|scheduler|framer-motion)[\/]/.test(id)) return 'react'
+          return undefined
+        },
+      },
+    },
+  },
   server: {
     allowedHosts: true,
     cors: true,
