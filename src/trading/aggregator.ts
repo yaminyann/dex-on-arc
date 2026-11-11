@@ -24,6 +24,9 @@ export interface RouteFill {
 }
 
 export interface SwapQuote {
+  /** Aggregator that produced this quote (for example 0x or kyber), when the gateway reports it. */
+  provider?: string
+  alternatives?: { provider: string; buyAmount: bigint }[]
   buyAmount: bigint
   minBuyAmount: bigint
   sellAmount: bigint
@@ -56,6 +59,8 @@ export interface AggregatorAdapter {
 }
 
 interface RawQuote {
+  provider?: string
+  alternatives?: { provider: string; buyAmount: string }[]
   liquidityAvailable: boolean
   buyAmount?: string
   minBuyAmount?: string
@@ -91,6 +96,8 @@ export function assertSafeSwapQuote(allowedTargets: readonly Address[], quote: S
 export function parseRawQuote(raw: RawQuote): SwapQuote | null {
   if (!raw.liquidityAvailable || !raw.buyAmount || !raw.minBuyAmount || !raw.sellAmount) return null
   return {
+    provider: raw.provider,
+    alternatives: raw.alternatives?.map((a) => ({ provider: a.provider, buyAmount: BigInt(a.buyAmount) })),
     buyAmount: BigInt(raw.buyAmount),
     minBuyAmount: BigInt(raw.minBuyAmount),
     sellAmount: BigInt(raw.sellAmount),
@@ -217,6 +224,8 @@ export function getAggregator(network: NetworkConfig): AggregatorAdapter {
 export interface BackendHealth {
   ok: boolean
   zeroEx: { configured: boolean; chains: number[] }
+  /** Present on gateway-enabled backends: true when at least one quote provider is usable. */
+  gateway?: { configured: boolean; providers: { id: string; configured: boolean; breaker: string; consecutiveFailures: number }[] }
   keeper: { enabled: boolean; running: boolean; network: string; keeperAddress: string | null; lastTick: number | null; lastError: string | null; executed: number; notes: string[] }
   automationProviders: { id: string; name: string; state: string; summary: string; evidence: string }[]
 }

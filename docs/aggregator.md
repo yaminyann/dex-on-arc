@@ -1,5 +1,7 @@
 # Aggregator integration (0x)
 
+> **Update (Phase 1):** swaps now go through a multi-aggregator quote gateway that ranks 0x and KyberSwap (keyless, verified live on Arc mainnet). See "Quote gateway" in [backend-api.md](backend-api.md). The 0x-specific sections below still describe how the 0x provider works.
+
 ## Support on Arc
 
 0x lists Arc mainnet (chain ID 5042) for its Swap API. Arc Testnet is not a supported chain. The project uses the **AllowanceHolder** endpoints (`/swap/allowance-holder/price` and `/quote`, header `0x-version: v2`), which need a 0x API key. Arc has no wrapped native token: USDC is both the gas token and an ERC-20, and swap amounts use the 6-decimal ERC-20 view.

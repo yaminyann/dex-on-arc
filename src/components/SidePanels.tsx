@@ -16,7 +16,7 @@ export function DepthPanel({ network, base }: { network: NetworkConfig; base: To
   const agg = getAggregator(network)
   const reason = agg.unavailableReason()
   const isTestRouter = agg.id === 'test-router'
-  const ready = !reason && !isTestRouter && Boolean(base && address) && health.data?.zeroEx.configured === true
+  const ready = !reason && !isTestRouter && Boolean(base && address) && (health.data?.gateway ? health.data.gateway.configured : health.data?.zeroEx.configured) === true
 
   const depth = useQuery({
     queryKey: ['depth', network.key, base?.address, address],
@@ -47,8 +47,8 @@ export function DepthPanel({ network, base }: { network: NetworkConfig; base: To
         <Notice>The test router fills any size at the feed price minus 0.10%, so it has no depth to show. Real depth comes from 0x quotes on Arc mainnet.</Notice>
       ) : !base ? (
         <Notice>Select a token.</Notice>
-      ) : health.data && !health.data.zeroEx.configured ? (
-        <Notice tone="warn">Add ZEROEX_API_KEY to .env to load quotes.</Notice>
+      ) : health.data && !(health.data.gateway ? health.data.gateway.configured : health.data.zeroEx.configured) ? (
+        <Notice tone="warn">No quote provider is available. Check the backend providers.</Notice>
       ) : !address ? (
         <Notice>Connect a wallet to load quotes.</Notice>
       ) : depth.isLoading ? (

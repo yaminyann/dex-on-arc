@@ -26,7 +26,14 @@ Changing a `VITE_` variable needs a dev-server restart.
 | `TRUSTED_PROXY_HOPS` | `0` | Number of reverse proxies in front of the backend. `0` ignores `x-forwarded-for`; set it to `1` behind one proxy so the client address is the one your proxy recorded |
 | `ALLOWED_ORIGINS` | none | Comma-separated browser origins allowed to call `/price` and `/quote`. Defense in depth only; non-browser clients can forge headers |
 | `ADMIN_TOKEN` | none | Bearer token for `/metrics` and detailed `/health`. Unset means loopback-only, direct connections. Set it in any deployed environment |
-| `UPSTREAM_BUDGET_PER_MIN` | `600` | Global cap on requests this process sends to 0x per minute, so many clients cannot drain the API key |
+| `UPSTREAM_BUDGET_PER_MIN` | `600` | Cap on requests this process sends to each quote provider per minute, so many clients cannot drain an API key |
+| `GATEWAY_PROVIDERS` | `0x,kyber` | Comma-separated quote providers to use. `0x` needs `ZEROEX_API_KEY`; `kyber` is keyless |
+| `GATEWAY_TIMEOUT_MS` | `4000` | Per-provider time limit; a slower provider is dropped for that request |
+| `GATEWAY_BREAKER_THRESHOLD` / `GATEWAY_BREAKER_COOLDOWN_MS` | `3` / `30000` | Consecutive failures that take a provider out of rotation, and for how long |
+| `GATEWAY_SIMULATE` | on | Set `false` to skip the `eth_call` check of firm quotes (failing quotes are demoted, never trusted) |
+| `KYBER_CLIENT_ID` | `arc-terminal` | Client id header sent to KyberSwap |
+| `KYBER_ROUTER_ALLOWLIST` | KyberSwap router | Comma-separated router addresses the backend accepts from KyberSwap. Anything else is refused |
+| `ALERT_WEBHOOK_URL` | none | Receives `{"text": "..."}` for keeper and provider alerts (deduplicated, secrets redacted) |
 | `VITE_SWAP_TARGETS_ARC` | none | Frontend. Extra reviewed swap contracts (comma-separated) allowed for market swaps on Arc mainnet, in addition to the 0x AllowanceHolder |
 
 ## Keeper (optional)
@@ -42,13 +49,20 @@ Changing a `VITE_` variable needs a dev-server restart.
 | `KEEPER_SHARD_INDEX` | `0` | This instance's shard |
 | `KEEPER_SHARD_COUNT` | `1` | Number of keeper instances splitting the work |
 | `KEEPER_MAX_ACTIONS_PER_TICK` | `25` | Cap on transactions sent per tick |
-| `KEEPER_QUOTE_CONCURRENCY` | `4` | Parallel 0x quote requests |
+| `KEEPER_QUOTE_CONCURRENCY` | `4` | Parallel quote requests |
+| `KEEPER_PRIVATE_KEY_FILE` | none | Path to a file holding the key (Docker or Kubernetes secret). Wins over `KEEPER_PRIVATE_KEY` |
+| `KEEPER_ROLE` | `primary` | `standby` watches everything and acts only on items that stayed actionable for `KEEPER_STANDBY_GRACE_MS` (default `90000`). Run one alongside primaries for failover |
+| `KEEPER_REQUIRE_PROFIT` | `true` | Skip executions whose expected keeper fee does not cover gas. Always off with the testnet test router |
+| `KEEPER_PROFIT_MARGIN_BPS` | `0` | Extra margin over break-even, in bps of gas cost |
+| `KEEPER_MIN_FEE_USDC_MICRO` | `0` | Absolute minimum expected fee, in millionths of a USDC |
+| `KEEPER_MIN_GAS_PRICE_GWEI` | `20` | Fee floor. Arc drops transactions priced below its base-fee floor without an error |
+| `KEEPER_MIN_BALANCE_USDC` | `1` | The keeper alerts when its USDC balance falls below this |
 
 ## RPC selection (backend)
 
 For each chain the backend uses, in order:
 
-1. `RPC_URL_<chain>` (for example `RPC_URL_Arc_Testnet`, `RPC_URL_Arc`): your own provider URL. Recommended for any deployed keeper.
+1. `RPC_URL_<chain>` (for example `RPC_URL_Arc_Testnet`, `RPC_URL_Arc`): your own provider URL, or several separated by commas. With several, a failing endpoint falls over to the next. Recommended for any deployed keeper.
 2. The provisioned proxy (`RPC_PROXY_BASE_URL`, `RPC_PROXY_TOKEN`, `RPC_PROXY_CHAINS`) when present. It exists only inside Arc Studio and is never available on other hosts.
 3. The public Arc RPC from the generated chain facts.
 

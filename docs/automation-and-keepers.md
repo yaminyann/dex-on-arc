@@ -42,6 +42,16 @@ Start it with `KEEPER_ENABLED=true`, `KEEPER_PRIVATE_KEY=<dedicated funded key>`
 5. **Act**, up to `KEEPER_MAX_ACTIONS_PER_TICK`: maintenance calls first, then fetch 0x quotes with bounded concurrency, verify the target is allowlisted, simulate, and send.
 6. **Backoff**: items that fail simulation, have no route or revert go on exponential backoff (30 s doubling to 10 min) so they cannot starve healthy items.
 
+Since Phase 1 the act step works like this:
+
+- **Quotes** come from the gateway (0x and KyberSwap). The keeper takes the best-ranked quote whose target the contract owner has allowlisted, so adding a second aggregator needs a timelocked `queueSwapTarget` for its router.
+- **Gas estimation is the simulation.** `estimateContractGas` reverts for items that are not executable; those back off.
+- **Profitability.** For each execution the expected keeper fee (on output for sells, approximated from the input for buys and DCA) must cover the gas cost plus `KEEPER_PROFIT_MARGIN_BPS`. Unprofitable items are skipped and counted in `skippedUnprofitable`. The contract has no minimum order size, so dust orders are never executed by a profit-requiring keeper; they are refunded at expiry. Set `KEEPER_REQUIRE_PROFIT=false` to execute everything anyway.
+- **Concurrent sends.** All prepared transactions are broadcast back to back with explicit nonces from the chain's pending count and confirmed in parallel. A failed send stops the batch and the next tick re-reads the nonce.
+- **Gas price floor** of 20 gwei (`KEEPER_MIN_GAS_PRICE_GWEI`) so Arc does not silently drop transactions.
+- **Failover.** Run a `KEEPER_ROLE=standby` instance next to your primaries. It watches every item but acts only after an item stayed actionable for the grace period, so it stays idle while primaries are healthy and takes over when they are not. No shared store is needed because every call is permissionless and idempotent.
+- **Keys** can be mounted as a file (`KEEPER_PRIVATE_KEY_FILE`). KMS or HSM signing is not built.
+
 The keeper reads state from the contract, not from event logs. A restart rebuilds its working set from the chain, so there is no block-0 backfill and no persisted cursor to lose.
 
 ### On Arc Testnet

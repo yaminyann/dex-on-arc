@@ -194,3 +194,17 @@ QuoteGateway (backend)
 | typecheck ও CI | typecheck সবুজ; GitHub Actions CI যোগ হয়েছে (forge job এখনো এই মেশিনে যাচাই হয়নি) |
 | Docs drift | ঠিক হয়েছে (AGENTS.md, deployment.md, configuration.md, backend-api.md) |
 | Independent audit, fork test, oracle (Data Streams/Pyth), keeper concurrency/KMS/failover/min-notional | **বাকি**। Contract পরিবর্তন বা বাইরের কাজ লাগে (Phase 1-3) |
+
+---
+
+## ৯. Phase 1 স্ট্যাটাস (2026-11-12)
+
+| আইটেম | স্ট্যাটাস |
+| --- | --- |
+| Multi-aggregator gateway | হয়েছে: 0x + KyberSwap (keyless; Arc mainnet এ লাইভ route/build যাচাই করা)। সমান্তরাল quote, `minBuyAmount - gas` দিয়ে ranking, timeout, per-provider budget, circuit breaker, `eth_call` simulation (ব্যর্থ quote নামানো হয়) |
+| Kyber router সুরক্ষা | API-র দেওয়া router allowlist-এ না থাকলে বা sell amount না মিললে প্রত্যাখ্যান; ফ্রন্টএন্ডেও pinned |
+| Keeper | nonce manager + পরপর broadcast + সমান্তরাল confirm; profitability check (fee < gas হলে skip); 20 gwei gas floor; standby role (stateless failover); `KEEPER_PRIVATE_KEY_FILE`; multi-RPC fallback |
+| Observability | Prometheus (`/metrics?format=prometheus`), webhook alert (low balance, tick failure, provider breaker), error-এ URL/key redact |
+| টেস্ট | 73 টেস্ট পাস (গেটওয়ে, Kyber fixture, breaker, keeper-core, alerts, prometheus সহ) |
+| লাইভ যাচাই | Gateway `/price` ও `/quote` Arc mainnet এ Kyber দিয়ে কাজ করেছে। Keeper testnet এ চালিয়ে 8 tx পাঠিয়েছে, 0 ব্যর্থ |
+| বাকি | KMS/HSM signing, WebSocket event-driven wake, Sentry, Redis shared cache, taker-বিহীন price cache key, আসল 0x key দিয়ে 0x provider পরীক্ষা, Kyber router কে অন-চেইন contract এ allowlist (owner, timelock) |

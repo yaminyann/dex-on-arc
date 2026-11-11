@@ -24,7 +24,8 @@ export function MarketForm({ ctx }: { ctx: TradeCtx }) {
   const sellAmount = parseTokenAmount(useDeferredValue(amount), sellToken.decimals)
   const aggregator = getAggregator(network)
   const unavailable = aggregator.unavailableReason()
-  const keyMissing = aggregator.id === '0x' && !unavailable && health.data && !health.data.zeroEx.configured
+  const providersReady = health.data ? (health.data.gateway ? health.data.gateway.configured : health.data.zeroEx.configured) : true
+  const keyMissing = aggregator.id === '0x' && !unavailable && !providersReady
   const backendDown = !unavailable && health.isError
 
   const price = useQuery({
@@ -114,6 +115,9 @@ export function MarketForm({ ctx }: { ctx: TradeCtx }) {
         ) : q ? (
           <>
             <Row label="You receive (est.)" value={`${formatToken(q.buyAmount, buyToken.decimals, 6)} ${buyToken.symbol}`} />
+            {q.provider && (
+              <Row label="Best route via" value={q.alternatives && q.alternatives.length > 1 ? `${q.provider} (best of ${q.alternatives.length})` : q.provider} />
+            )}
             <Row label="Minimum received" value={`${formatToken(q.minBuyAmount, buyToken.decimals, 6)} ${buyToken.symbol}`} />
             <Row label="Slippage" value={`${(slippageBps / 100).toFixed(2)}%`} />
             <Row

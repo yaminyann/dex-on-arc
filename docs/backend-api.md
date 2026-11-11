@@ -63,6 +63,27 @@ Successful response (fields the app uses; others are dropped):
 
 `transaction` is present only for `/quote`. When no route has liquidity the body is `{ "liquidityAvailable": false }` and no amounts are returned: the app shows "no route", never an estimate.
 
+## Quote gateway
+
+`/price` and `/quote` no longer talk to one aggregator. The gateway (`server/gateway/`) asks every configured provider in parallel (today: 0x and KyberSwap), drops providers that are unconfigured, unsupported, over their budget, timed out or in an open circuit breaker, and ranks the rest by guaranteed output (`minBuyAmount`) minus gas when the buy token is USDC. Firm quotes are checked with an `eth_call` from the taker; a failing quote is demoted below passing ones.
+
+The response keeps the fields above and adds:
+
+| Field | Meaning |
+| --- | --- |
+| `provider` | Winning provider (`0x` or `kyber`) |
+| `alternatives` | Every valid quote in rank order (`provider`, `buyAmount`, `minBuyAmount`, `simulation`) |
+| `providers` | What each provider did (`quote`, `no_liquidity`, `error`, `timeout`, `breaker_open`, `budget`, `unconfigured`, `unsupported`) with timing |
+| `simulation` | `ok`, `failed` or `skipped` (skipped when the taker's allowance is insufficient) |
+
+Trust rules per provider: the KyberSwap router the API returns must be in `KYBER_ROUTER_ALLOWLIST`, and the quoted sell amount must equal the request. The browser additionally pins every transaction target and approval spender (see Abuse and trust controls). A keeper uses the same ranking with `taker = the orders contract`, takes the best quote whose target the contract owner has allowlisted, and skips the `eth_call` check.
+
+Adding a provider: implement `QuoteProvider` (`server/gateway/types.ts`), normalize to `GatewayQuote`, register it in `server/gateway/instance.ts`, add its router to the frontend `swapTargets` and queue it on the orders contract (timelocked) before keepers can use it.
+
+## Observability
+
+`GET /metrics` (operator only) returns JSON. `GET /metrics?format=prometheus` (or `Accept: text/plain`) returns Prometheus text with request, cache, keeper action, keeper balance, last-OK-tick age and per-provider `arc_gateway_provider_up` series. Set `ALERT_WEBHOOK_URL` to be notified when the keeper wallet runs low, ticks fail three times in a row, or a quote provider's breaker opens (one message per condition per 15 minutes, plus one on recovery).
+
 ## Caching and coalescing
 
 `/price` responses are cached for `PRICE_CACHE_TTL_MS` (default 4 s) per unique request, and concurrent identical requests share one upstream call. The response header `x-cache` is `hit` or `miss`. `/quote` is never cached because it returns executable calldata. Failed upstream loads are not cached by the loader, but an upstream HTTP error body returned by 0x is cached for the TTL like any response.

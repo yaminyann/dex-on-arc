@@ -13,7 +13,10 @@
  *   ADMIN_TOKEN         bearer token for /metrics and detailed /health. Unset: loopback-only, direct
  *   UPSTREAM_BUDGET_PER_MIN  global cap on calls to 0x from this process (default 600)
  */
-import { fetchZeroEx, isApiError, parseQuoteRequest, zeroExConfigured, ZEROEX_SUPPORTED_CHAINS } from './zerox'
+import { isApiError, parseQuoteRequest, ZEROEX_SUPPORTED_CHAINS } from './zerox'
+import { gateway } from './gateway/instance'
+import { renderPrometheus } from './prometheus'
+import { alerter } from './alerts'
 import { keeperStatus, startKeeper } from './keeper'
 import { listProviders } from './automation/providers'
 import { metrics, RateLimiter, TtlCache } from './scale'
@@ -33,10 +36,6 @@ const limits = {
   other: new RateLimiter(Math.round(240 * scale), 60_000),
 }
 
-// Whatever the callers do, this process never sends 0x more than this many requests per minute,
-// so the API key cannot be drained by many clients at once.
-const upstreamBudget = new RateLimiter(Math.max(1, Math.floor(Number(process.env.UPSTREAM_BUDGET_PER_MIN ?? 600)) || 600), 60_000)
-
 const priceCache = new TtlCache<{ status: number; body: unknown }>(PRICE_TTL_MS, 1000)
 
 function json(body: unknown, status = 200, extra: Record<string, string> = {}): Response {
@@ -44,13 +43,6 @@ function json(body: unknown, status = 200, extra: Record<string, string> = {}): 
     status,
     headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...extra },
   })
-}
-
-function budgetExceeded() {
-  return {
-    status: 503,
-    body: { error: { code: 'UPSTREAM_BUDGET_EXCEEDED', message: 'The quote service is busy. Retry in a moment.' } },
-  }
 }
 
 const server = Bun.serve({
@@ -80,7 +72,8 @@ const server = Bun.serve({
         : { ...keeper, keeperAddress: null, lastError: keeper.lastError ? 'Keeper reported an error. Details are restricted to operators.' : null }
       return json({
         ok: true,
-        zeroEx: { configured: zeroExConfigured(), chains: [...ZEROEX_SUPPORTED_CHAINS] },
+        zeroEx: { configured: gateway.status().some((p) => p.id === '0x' && p.configured), chains: [...ZEROEX_SUPPORTED_CHAINS] },
+        gateway: { configured: gateway.configured, providers: gateway.status() },
         keeper: view,
         automationProviders: listProviders(),
       })
@@ -88,10 +81,16 @@ const server = Bun.serve({
 
     if (url.pathname === '/metrics') {
       if (!operator) return json({ error: { code: 'FORBIDDEN', message: 'Operator access required.' } }, 403)
+      const uptimeSeconds = Math.floor((Date.now() - metrics.startedAt) / 1000)
+      if (url.searchParams.get('format') === 'prometheus' || req.headers.get('accept')?.includes('text/plain')) {
+        const text = renderPrometheus({ uptimeSeconds, http: metrics.http, keeper: metrics.keeper, providers: gateway.status(), priceCacheEntries: priceCache.size, nowMs: Date.now() })
+        return new Response(text, { headers: { 'content-type': 'text/plain; version=0.0.4; charset=utf-8', 'cache-control': 'no-store' } })
+      }
       return json({
-        uptimeSeconds: Math.floor((Date.now() - metrics.startedAt) / 1000),
+        uptimeSeconds,
         http: { ...metrics.http, priceCacheEntries: priceCache.size },
         keeper: metrics.keeper,
+        gateway: gateway.status(),
       })
     }
 
@@ -103,27 +102,22 @@ const server = Bun.serve({
       if (isApiError(parsed)) return json({ error: { code: parsed.code, message: parsed.message } }, parsed.status)
       try {
         if (url.pathname === '/price') {
-          // Identical requests inside the TTL share one upstream call.
+          // Identical requests inside the TTL share one gateway round trip.
           const cacheKey = [parsed.chainId, parsed.sellToken, parsed.buyToken, parsed.sellAmount, parsed.taker, parsed.slippageBps].join(':').toLowerCase()
           let fresh = false
           const out = await priceCache.get(cacheKey, async () => {
             fresh = true
-            if (!upstreamBudget.allow('global')) return budgetExceeded()
-            return fetchZeroEx('price', parsed)
+            return gateway.best('price', parsed)
           })
           if (fresh) metrics.http.cacheMisses += 1
           else metrics.http.cacheHits += 1
           return json(out.body, out.status, { 'x-cache': fresh ? 'miss' : 'hit' })
         }
-        if (!upstreamBudget.allow('global')) {
-          const out = budgetExceeded()
-          return json(out.body, out.status, { 'retry-after': String(upstreamBudget.retryAfter('global')) })
-        }
-        const out = await fetchZeroEx('quote', parsed)
+        const out = await gateway.best('quote', parsed)
         return json(out.body, out.status)
       } catch {
         metrics.http.upstreamErrors += 1
-        return json({ error: { code: 'UPSTREAM_UNREACHABLE', message: 'Could not reach the 0x API.' } }, 502)
+        return json({ error: { code: 'UPSTREAM_UNREACHABLE', message: 'Could not reach the quote providers.' } }, 502)
       }
     }
 
@@ -132,8 +126,14 @@ const server = Bun.serve({
 })
 
 console.log(
-  `[api] listening on :${server.port} (0x key ${zeroExConfigured() ? 'configured' : 'missing'}, trusted proxy hops ${trustedHops}, ` +
+  `[api] listening on :${server.port} (providers: ${gateway.status().map((p) => `${p.id}=${p.configured ? 'on' : 'no key'}`).join(', ')}, trusted proxy hops ${trustedHops}, ` +
     `origin gate ${allowedOrigins.length ? 'on' : 'off'}, operator auth ${adminToken ? 'token' : 'loopback only'})`,
 )
 if (!adminToken) console.warn('[api] ADMIN_TOKEN is not set: /metrics and detailed /health are limited to direct loopback requests. Set it in production.')
+// Tell operators when a quote provider's breaker opens or closes.
+setInterval(() => {
+  for (const p of gateway.status()) {
+    if (p.configured) void alerter.set(`gateway:${p.id}`, p.breaker === 'open', `quote provider ${p.id} is failing and has been taken out of rotation`)
+  }
+}, 15_000).unref()
 startKeeper()

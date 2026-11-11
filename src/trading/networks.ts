@@ -58,6 +58,9 @@ const env = import.meta.env
  */
 export const ZEROEX_ALLOWANCE_HOLDER: Address = '0x0000000000001fF3684f28c67538d4D072C22734'
 
+/** KyberSwap MetaAggregationRouterV2. Code is present at this address on Arc mainnet; confirm it against KyberSwap's docs before mainnet use. */
+export const KYBER_ROUTER: Address = '0x6131B5fae19EA4f9D964eAc0408E4408b66337b5'
+
 function addr(value: unknown): Address | undefined {
   return typeof value === 'string' && /^0x[0-9a-fA-F]{40}$/.test(value) ? (value as Address) : undefined
 }
@@ -137,7 +140,7 @@ export const NETWORKS: Record<NetworkKey, NetworkConfig> = {
     zeroEx: { supported: true, reason: '' },
     oracle: { supported: true, reason: '' },
     // Extra reviewed targets can be added with VITE_SWAP_TARGETS_ARC (comma-separated addresses).
-    swapTargets: [ZEROEX_ALLOWANCE_HOLDER, ...String(env.VITE_SWAP_TARGETS_ARC ?? '').split(',').map((s) => addr(s.trim())).filter((a): a is Address => Boolean(a))],
+    swapTargets: [ZEROEX_ALLOWANCE_HOLDER, KYBER_ROUTER, ...String(env.VITE_SWAP_TARGETS_ARC ?? '').split(',').map((s) => addr(s.trim())).filter((a): a is Address => Boolean(a))],
   },
 }
 

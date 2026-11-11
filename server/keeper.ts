@@ -17,12 +17,16 @@
  * stuck order never consumes the budget. State is read directly from the contract (no log
  * scanning), so a restart rebuilds the set from the chain and there is no block-0 backfill.
  */
-import { createPublicClient, createWalletClient, encodeFunctionData, http, type Address, type Hex, type PublicClient } from 'viem'
+import { createPublicClient, createWalletClient, encodeFunctionData, erc20Abi, type Address, type Hex, type PublicClient } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { arc, arcTestnet } from 'viem/chains'
 import { ordersAbi } from '../src/trading/ordersAbi'
 import { getChain } from '../src/onchain-facts'
-import { fetchZeroEx, ZEROEX_SUPPORTED_CHAINS } from './zerox'
+import { ZEROEX_SUPPORTED_CHAINS } from './zerox'
+import { gateway } from './gateway/instance'
+import { resolveRpcUrls, transportFor } from './rpc'
+import { alerter } from './alerts'
+import { applyGasFloor, expectedFeeUsdc6, isProfitable, loadKeeperKey, NonceTracker, StandbyGate, type ProfitPolicy } from './keeper-core'
 import harness from '../src/trading/testnet-harness.json'
 import { Backoff, chunk, inShard, mapLimit, metrics } from './scale'
 import { redactSecrets } from './security'
@@ -45,6 +49,7 @@ interface Status {
   running: boolean
   network: string
   keeperAddress: string | null
+  role: 'primary' | 'standby'
   lastTick: number | null
   lastError: string | null
   executed: number
@@ -60,6 +65,7 @@ const status: Status = {
   running: false,
   network: 'arc-testnet',
   keeperAddress: null,
+  role: 'primary',
   lastTick: null,
   lastError: null,
   executed: 0,
@@ -72,16 +78,6 @@ const status: Status = {
 
 export function keeperStatus(): Status {
   return { ...status, notes: [...status.notes] }
-}
-
-function resolveRpc(compassChain: string, fallback: string): string {
-  const own = process.env[`RPC_URL_${compassChain}`]
-  if (own) return own
-  const proxied = (process.env.RPC_PROXY_CHAINS ?? '').split(',').includes(compassChain)
-  if (proxied && process.env.RPC_PROXY_BASE_URL) {
-    return `${process.env.RPC_PROXY_BASE_URL}/api/rpc/${compassChain}?_rpc_token=${process.env.RPC_PROXY_TOKEN}`
-  }
-  return fallback
 }
 
 function envInt(name: string, fallback: number, min: number, max: number): number {
@@ -136,6 +132,12 @@ interface Ctx {
   retryOrders: Set<bigint>
   retryDcas: Set<bigint>
   backoff: Backoff
+  role: 'primary' | 'standby'
+  standby: StandbyGate
+  profit: ProfitPolicy
+  gasFloorWei: bigint
+  usdc: Address
+  feeBps: number
 }
 
 /**
@@ -158,11 +160,12 @@ export function startKeeper(): void {
     status.notes.push('Keeper disabled (KEEPER_ENABLED is not "true").')
     return
   }
-  const pk = process.env.KEEPER_PRIVATE_KEY
-  if (!pk || !/^0x[0-9a-fA-F]{64}$/.test(pk)) {
-    status.lastError = 'KEEPER_PRIVATE_KEY is missing or malformed.'
+  const loaded = loadKeeperKey()
+  if (!loaded.key) {
+    status.lastError = loaded.error ?? 'Keeper private key is missing or malformed.'
     return
   }
+  const pk = loaded.key
   const mainnet = process.env.KEEPER_NETWORK === 'arc'
   const chain = mainnet ? arc : arcTestnet
   const compassChain = mainnet ? 'Arc' : 'Arc_Testnet'
@@ -172,9 +175,12 @@ export function startKeeper(): void {
     status.lastError = 'Orders contract address is not configured for this network.'
     return
   }
-  const shardCount = envInt('KEEPER_SHARD_COUNT', 1, 1, 256)
-  const shardIndex = envInt('KEEPER_SHARD_INDEX', 0, 0, shardCount - 1)
-  const transport = http(resolveRpc(compassChain, facts.rpcUrls[0]))
+  const role = process.env.KEEPER_ROLE === 'standby' ? 'standby' : 'primary'
+  // A standby watches every item; sharding only applies to primaries.
+  const shardCount = role === 'standby' ? 1 : envInt('KEEPER_SHARD_COUNT', 1, 1, 256)
+  const shardIndex = role === 'standby' ? 0 : envInt('KEEPER_SHARD_INDEX', 0, 0, shardCount - 1)
+  const transport = transportFor(resolveRpcUrls(compassChain, facts.rpcUrls))
+  const testRouter = !mainnet && process.env.KEEPER_USE_TEST_ROUTER !== 'false' ? (harness.router as Address) : undefined
   const account = privateKeyToAccount(pk as Hex)
   const ctx: Ctx = {
     publicClient: createPublicClient({ chain, transport }) as PublicClient,
@@ -191,16 +197,29 @@ export function startKeeper(): void {
     retryOrders: new Set(),
     retryDcas: new Set(),
     backoff: new Backoff(),
-    testRouter: !mainnet && process.env.KEEPER_USE_TEST_ROUTER !== 'false' ? (harness.router as Address) : undefined,
+    testRouter,
+    role,
+    standby: new StandbyGate(envInt('KEEPER_STANDBY_GRACE_MS', 90_000, 1000, 3_600_000)),
+    // The test router pays no real fee, so profitability only applies where a real fee exists.
+    profit: {
+      require: !testRouter && process.env.KEEPER_REQUIRE_PROFIT !== 'false',
+      marginBps: envInt('KEEPER_PROFIT_MARGIN_BPS', 0, 0, 100_000),
+      minFeeUsdc6: BigInt(envInt('KEEPER_MIN_FEE_USDC_MICRO', 0, 0, 1_000_000_000)),
+    },
+    gasFloorWei: BigInt(envInt('KEEPER_MIN_GAS_PRICE_GWEI', 20, 0, 10_000)) * 1_000_000_000n,
+    usdc: (facts.usdc?.address ?? '0x3600000000000000000000000000000000000000') as Address,
+    feeBps: 10,
   }
   status.network = mainnet ? 'arc' : 'arc-testnet'
   status.keeperAddress = account.address
+  status.role = role
   status.shard = ctx.shard
   status.running = true
+  if (role === 'standby') status.notes.push(`Standby: acts on an item only after it stayed actionable for ${envInt('KEEPER_STANDBY_GRACE_MS', 90_000, 1000, 3_600_000)} ms.`)
   if (ctx.testRouter) {
     status.notes.push('Testnet: swaps are filled through the test router at the public test-feed price.')
   } else if (!ZEROEX_SUPPORTED_CHAINS.has(chain.id)) {
-    status.notes.push('0x does not support this chain: only maintenance calls (expire, activate, trail) run, swaps cannot.')
+    status.notes.push('No swap provider supports this chain: only maintenance calls (expire, activate, trail) run, swaps cannot.')
   }
 
   const interval = envInt('KEEPER_INTERVAL_MS', 15_000, 500, 3_600_000)
@@ -210,9 +229,15 @@ export function startKeeper(): void {
       try {
         await tick(ctx)
         status.lastError = null
+        metrics.keeper.consecutiveTickErrors = 0
+        metrics.keeper.lastOkTickAt = Date.now()
       } catch (e) {
         status.lastError = e instanceof Error ? redactSecrets(e.message).slice(0, 300) : 'unknown error'
+        metrics.keeper.consecutiveTickErrors += 1
       }
+      void alerter.set('keeper:ticks', metrics.keeper.consecutiveTickErrors >= 3, `keeper ticks are failing (${metrics.keeper.consecutiveTickErrors} in a row): ${status.lastError ?? ''}`)
+      const minBalance = Number(process.env.KEEPER_MIN_BALANCE_USDC ?? 1)
+      void alerter.set('keeper:balance', metrics.keeper.balanceUsdc >= 0 && metrics.keeper.balanceUsdc < minBalance, `keeper wallet is low: ${metrics.keeper.balanceUsdc} USDC (minimum ${minBalance}). Fund ${account.address}.`)
       metrics.keeper.ticks += 1
       metrics.keeper.lastTickMs = Date.now() - started
       status.lastTick = Date.now()
@@ -226,24 +251,6 @@ export function startKeeper(): void {
     }
   }
   void loop()
-}
-
-async function send(ctx: Ctx, functionName: 'execute' | 'executeDca' | 'expireOrder' | 'activateStop' | 'pokeTrailing', args: readonly unknown[]): Promise<boolean> {
-  try {
-    // Simulate first: a revert means the item is not executable right now, which is normal.
-    const { request } = await ctx.publicClient.simulateContract({
-      address: ctx.address,
-      abi: ordersAbi,
-      functionName,
-      args: args as never,
-      account: ctx.wallet.account,
-    })
-    const hash = await ctx.wallet.writeContract(request as never)
-    await ctx.publicClient.waitForTransactionReceipt({ hash })
-    return true
-  } catch {
-    return false
-  }
 }
 
 interface Candidate {
@@ -263,6 +270,9 @@ async function tick(ctx: Ctx) {
   ])
   ctx.quoteToken ??= await publicClient.readContract({ address, abi: ordersAbi, functionName: 'quote' })
   const quoteToken = ctx.quoteToken
+  ctx.feeBps = Number(await publicClient.readContract({ address, abi: ordersAbi, functionName: 'keeperFeeBps' }))
+  const balance = await publicClient.readContract({ address: ctx.usdc, abi: erc20Abi, functionName: 'balanceOf', args: [ctx.wallet.account!.address] }).catch(() => null)
+  if (balance !== null) metrics.keeper.balanceUsdc = Number(balance) / 1e6
   const now = BigInt(Math.floor(Date.now() / 1000))
   const nowKey = Date.now()
 
@@ -360,60 +370,145 @@ async function tick(ctx: Ctx) {
   }
 
   // 4. Act, bounded per tick. Maintenance is cheap and unblocks orders, so it goes first.
-  let budget = ctx.maxActions
-  for (const m of maintenance) {
-    if (budget-- <= 0) return
-    const ok = await send(ctx, m.fn, [m.id])
-    metrics.keeper.maintenanceCalls += 1
-    if (ok && m.fn === 'expireOrder') ctx.openOrders.delete(m.id)
+  // A standby keeper only acts on items that stayed actionable past its grace period.
+  const keyOf = (c: Candidate) => `${c.fn === 'execute' ? 'o' : 'd'}${c.id}`
+  const mKey = (m: { fn: string; id: bigint }) => `m:${m.fn}:${m.id}`
+  let acting = { maintenance, candidates }
+  if (ctx.role === 'standby') {
+    const ready = ctx.standby.observe([...maintenance.map(mKey), ...candidates.map(keyOf)], nowKey)
+    acting = { maintenance: maintenance.filter((m) => ready.has(mKey(m))), candidates: candidates.filter((c) => ready.has(keyOf(c))) }
+    metrics.keeper.standbyWaiting = ctx.standby.waiting - ready.size
   }
-  if ((!ZEROEX_SUPPORTED_CHAINS.has(ctx.chainId) && !ctx.testRouter) || candidates.length === 0) return
 
-  const batch = candidates.slice(0, Math.max(0, budget))
-  const quotes = await mapLimit(batch, ctx.quoteConcurrency, async (c) => {
-    try {
-      if (ctx.testRouter) {
-        const data = encodeFunctionData({ abi: testRouterAbi, functionName: 'swapExactIn', args: [c.sellToken, c.buyToken, c.sellAmount] })
-        return { liquidityAvailable: true, transaction: { to: ctx.testRouter, data } } as { liquidityAvailable?: boolean; transaction?: { to: Address; data: Hex } }
+  const jobs: Job[] = acting.maintenance.slice(0, ctx.maxActions).map((m) => ({ fn: m.fn, args: [m.id], key: mKey(m), maintenance: true }))
+
+  const swapsPossible = Boolean(ctx.testRouter) || gateway.providers.some((p) => p.configured() && p.supports(ctx.chainId))
+  if (swapsPossible && acting.candidates.length > 0) {
+    const batch = acting.candidates.slice(0, Math.max(0, ctx.maxActions - jobs.length))
+    const allowed = new Map<string, boolean>()
+    const isAllowed = async (to: string) => {
+      if (!allowed.has(to)) allowed.set(to, await publicClient.readContract({ address, abi: ordersAbi, functionName: 'swapTargets', args: [to as Address] }))
+      return allowed.get(to) === true
+    }
+    const built = await mapLimit(batch, ctx.quoteConcurrency, async (c): Promise<Job | null> => {
+      const key = keyOf(c)
+      try {
+        if (ctx.testRouter) {
+          const data = encodeFunctionData({ abi: testRouterAbi, functionName: 'swapExactIn', args: [c.sellToken, c.buyToken, c.sellAmount] })
+          return { fn: c.fn, args: [c.id, ctx.testRouter, data], key, maintenance: false, feeUsdc6: 0n }
+        }
+        const { ranked } = await gateway.rank('quote', { chainId: ctx.chainId, sellToken: c.sellToken, buyToken: c.buyToken, sellAmount: c.sellAmount.toString(), taker: address, slippageBps: Math.min(c.slippageBps, 100) }, { simulate: false })
+        // Best-ranked quote whose target the contract owner has allowlisted.
+        for (const q of ranked) {
+          if (!q.transaction) continue
+          if (!(await isAllowed(q.transaction.to))) {
+            status.lastError = `${q.provider} target ${q.transaction.to} is not allowlisted on the orders contract.`
+            continue
+          }
+          const feeUsdc6 = expectedFeeUsdc6({ outputIsQuoteToken: c.buyToken.toLowerCase() === quoteToken.toLowerCase(), buyAmount: q.buyAmount, sellAmount: c.sellAmount, feeBps: ctx.feeBps })
+          return { fn: c.fn, args: [c.id, q.transaction.to as Address, q.transaction.data as Hex], key, maintenance: false, feeUsdc6 }
+        }
+      } catch {
+        // fall through to backoff
       }
-      const q = await fetchZeroEx('quote', {
-        chainId: ctx.chainId,
-        sellToken: c.sellToken,
-        buyToken: c.buyToken,
-        sellAmount: c.sellAmount.toString(),
-        taker: address,
-        slippageBps: Math.min(c.slippageBps, 100),
-      })
-      return q.body as { liquidityAvailable?: boolean; transaction?: { to: Address; data: Hex } }
-    } catch {
+      ctx.backoff.fail(key)
       return null
-    }
-  })
+    })
+    for (const j of built) if (j) jobs.push(j)
+  }
+  if (jobs.length === 0) return
 
-  const allowed = new Map<string, boolean>()
-  for (let i = 0; i < batch.length; i++) {
-    const c = batch[i]
-    const key = `${c.fn === 'execute' ? 'o' : 'd'}${c.id}`
-    const tx = quotes[i]?.transaction
-    if (!quotes[i]?.liquidityAvailable || !tx) {
-      ctx.backoff.fail(key)
-      continue
-    }
-    if (!allowed.has(tx.to)) {
-      allowed.set(tx.to, await publicClient.readContract({ address, abi: ordersAbi, functionName: 'swapTargets', args: [tx.to] }))
-    }
-    if (!allowed.get(tx.to)) {
-      status.lastError = `0x target ${tx.to} is not allowlisted on the orders contract.`
-      ctx.backoff.fail(key)
-      continue
-    }
-    if (await send(ctx, c.fn, [c.id, tx.to, tx.data])) {
-      status.executed += 1
-      metrics.keeper.executed += 1
-      ctx.backoff.clear(key)
-    } else {
-      metrics.keeper.failedExecutions += 1
-      ctx.backoff.fail(key)
+  // Estimate gas (this also simulates: a revert means "not executable right now", which is normal),
+  // then drop executions whose fee would not cover gas.
+  const gasPrice = (await publicClient.getGasPrice().catch(() => ctx.gasFloorWei)) || ctx.gasFloorWei
+  const effectiveGasPrice = gasPrice > ctx.gasFloorWei ? gasPrice : ctx.gasFloorWei
+  const prepared = (
+    await mapLimit(jobs, 8, async (job): Promise<Prepared | null> => {
+      let gas: bigint
+      try {
+        gas = await publicClient.estimateContractGas({ address, abi: ordersAbi, functionName: job.fn, args: job.args as never, account: ctx.wallet.account } as never)
+      } catch {
+        if (!job.maintenance) {
+          metrics.keeper.failedExecutions += 1
+          ctx.backoff.fail(job.key)
+        }
+        return null
+      }
+      if (!job.maintenance && !isProfitable(ctx.profit, job.feeUsdc6 ?? 0n, gas, effectiveGasPrice)) {
+        metrics.keeper.skippedUnprofitable += 1
+        ctx.backoff.fail(job.key)
+        return null
+      }
+      return { job, gas }
+    })
+  ).filter((p): p is Prepared => p !== null)
+  if (prepared.length === 0) return
+
+  // Broadcast back to back with explicit nonces (no waiting between sends), then confirm in parallel.
+  const fees = applyGasFloor(await publicClient.estimateFeesPerGas().catch(() => undefined), ctx.gasFloorWei)
+  const nonce = new NonceTracker(await publicClient.getTransactionCount({ address: ctx.wallet.account!.address, blockTag: 'pending' }))
+  const sent: { p: Prepared; hash: Hex }[] = []
+  for (const p of prepared) {
+    try {
+      const hash = await ctx.wallet.writeContract({
+        address,
+        abi: ordersAbi,
+        functionName: p.job.fn,
+        args: p.job.args,
+        account: ctx.wallet.account,
+        chain: ctx.wallet.chain,
+        nonce: nonce.next(),
+        gas: (p.gas * 12n) / 10n,
+        ...fees,
+      } as never)
+      metrics.keeper.txSent += 1
+      sent.push({ p, hash })
+    } catch {
+      // A failed send can leave a nonce gap. Stop here; the next tick re-reads the pending count.
+      metrics.keeper.txFailed += 1
+      break
     }
   }
+  await Promise.all(
+    sent.map(async ({ p, hash }) => {
+      let ok = false
+      try {
+        ok = (await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 })).status === 'success'
+      } catch {
+        ok = false
+      }
+      const { job } = p
+      if (job.maintenance) {
+        metrics.keeper.maintenanceCalls += 1
+        if (!ok) metrics.keeper.txFailed += 1
+        else if (job.fn === 'expireOrder') ctx.openOrders.delete(job.args[0] as bigint)
+        return
+      }
+      if (ok) {
+        status.executed += 1
+        metrics.keeper.executed += 1
+        ctx.backoff.clear(job.key)
+      } else {
+        metrics.keeper.failedExecutions += 1
+        metrics.keeper.txFailed += 1
+        ctx.backoff.fail(job.key)
+      }
+    }),
+  )
+}
+
+type JobFn = 'execute' | 'executeDca' | 'expireOrder' | 'activateStop' | 'pokeTrailing'
+
+interface Job {
+  fn: JobFn
+  args: readonly unknown[]
+  key: string
+  maintenance: boolean
+  /** Expected keeper fee in 6-decimal USDC units (executions only). */
+  feeUsdc6?: bigint
+}
+
+interface Prepared {
+  job: Job
+  gas: bigint
 }

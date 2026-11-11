@@ -99,7 +99,7 @@ interface ZeroExResponse {
 }
 
 /** Fetches an indicative price or a firm quote and returns only the fields the app uses. */
-export async function fetchZeroEx(kind: QuoteKind, req: QuoteRequest): Promise<{ status: number; body: unknown }> {
+export async function fetchZeroEx(kind: QuoteKind, req: QuoteRequest, signal?: AbortSignal): Promise<{ status: number; body: unknown }> {
   const key = process.env.ZEROEX_API_KEY
   if (!key) {
     return {
@@ -115,7 +115,7 @@ export async function fetchZeroEx(kind: QuoteKind, req: QuoteRequest): Promise<{
   url.searchParams.set('taker', req.taker)
   url.searchParams.set('slippageBps', String(req.slippageBps))
 
-  const res = await fetch(url, { headers: { '0x-api-key': key, '0x-version': 'v2' } })
+  const res = await fetch(url, { headers: { '0x-api-key': key, '0x-version': 'v2' }, signal })
   const json = (await res.json().catch(() => ({}))) as ZeroExResponse
 
   if (!res.ok) {

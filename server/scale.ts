@@ -157,5 +157,14 @@ export const metrics = {
     failedExecutions: 0,
     skippedBackoff: 0,
     maintenanceCalls: 0,
+    skippedUnprofitable: 0,
+    standbyWaiting: 0,
+    txSent: 0,
+    txFailed: 0,
+    consecutiveTickErrors: 0,
+    /** Keeper wallet balance in whole USDC, or -1 until first read. */
+    balanceUsdc: -1,
+    /** Unix ms of the last tick that finished without throwing, 0 if none yet. */
+    lastOkTickAt: 0,
   },
 }
