@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import type { NetworkKey } from './networks'
 
 export type Theme = 'dark' | 'light'
-export type Page = 'trade' | 'portfolio' | 'prompt'
+export type Page = 'trade' | 'portfolio'
 
 interface Settings {
   theme: Theme

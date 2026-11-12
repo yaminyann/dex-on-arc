@@ -18,7 +18,7 @@ An honest list of what does not work, and why. If a control is visible in the ap
 
 | Area | Limitation |
 | --- | --- |
-| Order book | None. Arc liquidity is AMM-based; the app shows swap depth from live quotes |
+| Order book | None. Arc liquidity is AMM-based; the market form shows the live quote and route for the size you enter |
 | Chart prices | Coinbase Exchange reference prices for the underlying asset, not Arc pool prices. EURC uses EURC-USDC; cirBTC is charted as BTC-USD |
 | Market swap history | Not recorded by the contract. Only swaps sent from this browser are listed |
 | PnL and positions | Only fills made through the order contract |
@@ -26,9 +26,8 @@ An honest list of what does not work, and why. If a control is visible in the ap
 | Partial fills | Not supported. An execution must spend the entire input or revert |
 | Trailing stop and stop-limit | Need a keeper to persist peaks and activation; without one they can trigger late or not at all |
 | Execution guarantee | A triggered order is not guaranteed to fill. If the market is worse than the user's minimum it stays open until expiry |
-| Failed-attempt log | Not kept onchain by design (a failure counter would let anyone brick an order). The Failed tab lists expired orders and orders waiting for a keeper |
+| Failed-attempt log | Not kept onchain by design (a failure counter would let anyone brick an order). Order history shows expired orders; Open orders flags orders waiting for a keeper |
 | Wallets | Injected wallets only; no WalletConnect or smart-account flows |
-| Prompt Station | UI only. No model provider, key storage or execution |
 | Languages and currencies | English UI; amounts in USDC and the listed tokens |
 
 ## Contract limitations

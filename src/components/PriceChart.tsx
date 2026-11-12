@@ -11,7 +11,7 @@ import {
   type UTCTimestamp,
 } from 'lightweight-charts'
 import { clsx } from 'clsx'
-import { TIMEFRAMES, ema, sma, type Candle, type Timeframe } from '@/trading/market'
+import { TIMEFRAMES, sma, type Candle, type Timeframe } from '@/trading/market'
 import { useSettings } from '@/trading/settings'
 import { Notice, Skeleton } from './ui'
 
@@ -37,10 +37,8 @@ export function PriceChart({ candles, loading, error, timeframe, onTimeframe, so
   const candleRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
   const volRef = useRef<ISeriesApi<'Histogram'> | null>(null)
   const smaRef = useRef<ISeriesApi<'Line'> | null>(null)
-  const emaRef = useRef<ISeriesApi<'Line'> | null>(null)
   const [showVol, setShowVol] = useState(true)
   const [showSma, setShowSma] = useState(true)
-  const [showEma, setShowEma] = useState(false)
   const fitted = useRef('')
 
   useEffect(() => {
@@ -64,7 +62,6 @@ export function PriceChart({ candles, loading, error, timeframe, onTimeframe, so
     volRef.current = chart.addSeries(HistogramSeries, { priceFormat: { type: 'volume' }, priceScaleId: 'vol' })
     chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } })
     smaRef.current = chart.addSeries(LineSeries, { color: cssRgb('accent'), lineWidth: 1, priceLineVisible: false, lastValueVisible: false })
-    emaRef.current = chart.addSeries(LineSeries, { color: cssRgb('warn'), lineWidth: 1, priceLineVisible: false, lastValueVisible: false })
     return () => {
       chart.remove()
       chartRef.current = null
@@ -80,11 +77,9 @@ export function PriceChart({ candles, loading, error, timeframe, onTimeframe, so
     })
     candleRef.current?.applyOptions({ upColor: cssRgb('up'), downColor: cssRgb('down'), wickUpColor: cssRgb('up'), wickDownColor: cssRgb('down') })
     smaRef.current?.applyOptions({ color: cssRgb('accent') })
-    emaRef.current?.applyOptions({ color: cssRgb('warn') })
   }, [theme])
 
   const sma20 = useMemo(() => sma(candles, 20), [candles])
-  const ema50 = useMemo(() => ema(candles, 50), [candles])
 
   useEffect(() => {
     const t = (n: number) => n as UTCTimestamp
@@ -93,18 +88,16 @@ export function PriceChart({ candles, loading, error, timeframe, onTimeframe, so
       showVol ? candles.map((c) => ({ time: t(c.time), value: c.volume, color: c.close >= c.open ? cssRgb('up', 0.35) : cssRgb('down', 0.35) })) : [],
     )
     smaRef.current?.setData(showSma ? sma20.map((p) => ({ time: t(p.time), value: p.value })) : [])
-    emaRef.current?.setData(showEma ? ema50.map((p) => ({ time: t(p.time), value: p.value })) : [])
     const key = `${timeframe}:${candles[0]?.time ?? 0}`
     if (candles.length && fitted.current !== key) {
       chartRef.current?.timeScale().fitContent()
       fitted.current = key
     }
-  }, [candles, showVol, showSma, showEma, sma20, ema50, timeframe])
+  }, [candles, showVol, showSma, sma20, timeframe])
 
   const toggles: [string, boolean, (v: boolean) => void][] = [
     ['Vol', showVol, setShowVol],
     ['MA 20', showSma, setShowSma],
-    ['EMA 50', showEma, setShowEma],
   ]
 
   return (
@@ -137,20 +130,20 @@ export function PriceChart({ candles, loading, error, timeframe, onTimeframe, so
         </div>
       </div>
 
-      <div className="relative h-[340px] sm:h-[420px]">
+      <div className="relative h-[280px] sm:h-[380px]">
         <div ref={host} className="absolute inset-0" />
         {loading && candles.length === 0 && <Skeleton className="absolute inset-3" />}
         {error && (
           <div className="absolute inset-x-3 top-3">
             <Notice tone="error" title="Market data unavailable">
-              {error}. No candles are shown because none are generated locally.
+              {error}.
             </Notice>
           </div>
         )}
       </div>
 
       <div className="flex items-center justify-between border-t border-line px-3 py-1.5 text-[11px] text-mute">
-        <span>{source ? `Reference data: Coinbase Exchange ${source}. Not an Arc pool price.` : 'No reference market for this asset.'}</span>
+        <span>{source ? `Reference chart: Coinbase ${source}. Not an Arc pool price.` : 'No reference market for this asset.'}</span>
         <span className={clsx('flex items-center gap-1', live && 'text-up')}>
           <span className={clsx('h-1.5 w-1.5 rounded-full', live ? 'bg-up' : 'bg-mute/50')} />
           {live ? 'Live' : 'Not streaming'}

@@ -76,7 +76,7 @@ createRoot(document.getElementById('root')!).render(
         <ConnectKitProvider>
           <App />
           <StudioWatermark />
-          <Toaster position="top-center" />
+          <Toaster position="top-center" offset={64} duration={5000} />
         </ConnectKitProvider>
       </QueryClientProvider>
     </WagmiProvider>

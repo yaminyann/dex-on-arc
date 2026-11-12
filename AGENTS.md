@@ -6,7 +6,7 @@ Project memory for future agents.
 
 ## What This App Does
 
-Non-custodial trading terminal on Arc: market swaps through a quote gateway (0x, KyberSwap; test routers on testnet), escrowed conditional orders and DCA via `ArcTradeOrders`, portfolio, and a Prompt Station placeholder (UI only, no LLM).
+Non-custodial trading terminal on Arc: market swaps through a quote gateway (0x, KyberSwap; test routers on testnet), escrowed conditional orders and DCA via `ArcTradeOrders`, and a portfolio page.
 
 ## Tech Stack
 
@@ -52,7 +52,7 @@ Non-custodial trading terminal on Arc: market swaps through a quote gateway (0x,
 
 - `contracts/ArcTradeOrders.sol` - escrow, oracle checks, orders, DCA
 - `src/trading/` - networks, math, hooks, aggregator adapter, market data, portfolio
-- `src/components/` - Terminal, TradePanel, forms, OrderTabs, Portfolio, PromptStation
+- `src/components/` - Terminal, TradePanel, forms, OrderTabs, Portfolio, NetworkBanner, TestnetTools
 - `server/` - quote gateway (`gateway/`), keeper (`keeper.ts`, `keeper-core.ts`), indexer (`indexer/`), alerts, automation provider registry
 - `scripts/load-test.ts`, `scripts/fork-mainnet-test.ts` - load test and mainnet-fork test
 - `.env.example` lists every setting; `docs/indexer.md` describes the history API

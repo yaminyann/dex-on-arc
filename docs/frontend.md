@@ -6,11 +6,14 @@ React 18, Vite, TypeScript, Tailwind, wagmi v2 with ConnectKit (injected wallets
 
 | Page | Component | Contents |
 | --- | --- | --- |
-| Trade | `Terminal` | Network banner, token selector and pair stats, chart, order tabs, trade panel, swap depth, automation status |
-| Portfolio | `Portfolio` | Total value, realized and unrealized PnL, balances with locked funds, DCA performance |
-| Prompt Station | `PromptStation` | Disabled coming-soon layout, no model calls |
+| Trade | `Terminal` | Network banner, token selector and pair stats, trade panel, chart, order tabs, collapsible testnet tools (testnet only) |
+| Portfolio | `Portfolio` | Total value, realized and unrealized PnL, balances with locked funds (zero balances of untradable tokens hidden), DCA performance when a plan exists |
 
-Navigation, network selector, wallet button, USDC balance, theme toggle and settings live in `Header`.
+Navigation, network selector (Testnet / Mainnet), wallet button, USDC balance, theme toggle and settings (max slippage, order expiry) live in `Header`.
+
+On small screens the trade panel sits directly under the pair header and above the chart; from the `lg` breakpoint it is a right-hand column. A network with no tokens or contract (mainnet until it is configured) shows a single "Trading is not enabled" card instead of disabled panels. Only tokens with an oracle feed are offered for trading (`tradableBases`): on testnet that is tBTC, tETH and tSOL; EURC, cirBTC and WETH only appear in the portfolio when held.
+
+Removed on purpose: the Prompt Station placeholder, the swap depth panel, the automation provider list and the EMA 50 chart toggle. The keeper status is one line under non-market order forms.
 
 ## Trade panel
 
@@ -28,9 +31,11 @@ Every create flow goes through `ConfirmModal`: summary rows, warnings, and real 
 
 ## Order tabs
 
-Open orders, Order history, Trade history, Positions, DCA strategies, Stop-loss / Take-profit, Failed / expired. Tabs read the same cached queries. Tables paginate at 25 rows. Actions: cancel, refund expired, pause/resume/cancel DCA.
+Open orders, DCA plans, Order history, Trades, Positions. Tabs read the same cached queries. Tables paginate at 25 rows. Actions: cancel, refund expired, pause/resume/cancel DCA.
 
-Failed / expired shows expired orders plus a note when orders are triggered but not yet filled (waiting on a keeper or an unfavourable market). The contract intentionally has no failure counter, so there is no "failed attempts" list.
+Order history lists every closed order with its status (executed, cancelled, expired), so stop-loss, take-profit and failed or expired orders are filtered by the Type and Status columns rather than separate tabs. Open orders shows a note when orders are ready but not yet filled (waiting on a keeper or an unfavourable market). The contract intentionally has no failure counter, so there is no "failed attempts" list.
+
+Positions only count what was bought through the contract: a sell larger than the tracked purchases never makes the quantity negative, and the untracked part is left out of realized PnL.
 
 ## Data layer (`src/trading`)
 

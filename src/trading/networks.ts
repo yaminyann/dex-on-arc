@@ -146,6 +146,14 @@ export const NETWORKS: Record<NetworkKey, NetworkConfig> = {
 
 export const NETWORK_LIST: NetworkConfig[] = [NETWORKS['arc-testnet'], NETWORKS.arc]
 
+/**
+ * Tokens the terminal can actually trade. On Arc Testnet only the harness assets have an oracle feed,
+ * so the other listed tokens (EURC, cirBTC, WETH) are shown in the portfolio but not offered for trading.
+ */
+export function tradableBases(network: NetworkConfig): TokenInfo[] {
+  return network.testHarness ? network.bases.filter((t) => t.isTest) : network.bases
+}
+
 export function networkByChainId(chainId: number | undefined): NetworkConfig | undefined {
   return NETWORK_LIST.find((n) => n.chainId === chainId)
 }

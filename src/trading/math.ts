@@ -46,8 +46,23 @@ export function parseTokenAmount(input: string, decimals: number): bigint | null
   }
 }
 
+/**
+ * Formats a raw token amount. Values below 1 keep at least four significant digits (up to the token's
+ * own decimals) so 0.00000555 BTC is not shown as "0.000005" or "0". Negative values keep their sign,
+ * and a result that rounds to zero is never shown as "-0".
+ */
 export function formatToken(raw: bigint, decimals: number, maxFraction = 4): string {
-  const fixed = formatUnitsFixed(raw, decimals, Math.min(maxFraction, decimals))
+  if (raw < 0n) {
+    const positive = formatToken(-raw, decimals, maxFraction)
+    return positive === '0' ? '0' : `-${positive}`
+  }
+  let digits = Math.min(maxFraction, decimals)
+  if (raw > 0n && raw < 10n ** BigInt(decimals)) {
+    // Leading zeros after the decimal point of a value below one.
+    const leadingZeros = Math.max(0, decimals - raw.toString().length)
+    digits = Math.min(decimals, Math.max(digits, leadingZeros + 4))
+  }
+  const fixed = formatUnitsFixed(raw, decimals, digits)
   const [whole, frac = ''] = fixed.split('.')
   const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
   const trimmed = frac.replace(/0+$/, '')

@@ -64,6 +64,15 @@ describe('order math', () => {
     expect(formatToken(1_000_000n, 6, 2)).toBe('1')
   })
 
+  test('formatting keeps significant digits for small amounts and never shows -0', () => {
+    expect(formatToken(555n, 8, 6)).toBe('0.00000555')
+    expect(formatToken(2_732n, 8, 6)).toBe('0.00002732')
+    expect(formatToken(0n, 8, 6)).toBe('0')
+    expect(formatToken(-5n, 6, 2)).toBe('-0.000005')
+    expect(formatToken(-1_500_000n, 6, 2)).toBe('-1.5')
+    expect(formatToken(500_000_000_000_000_000n, 18, 4)).toBe('0.5')
+  })
+
   test('DCA schedule sizing', () => {
     expect(buysForDuration(30, 86400)).toBe(30)
     expect(buysForDuration(30, 604800)).toBe(4)
@@ -110,6 +119,19 @@ describe('positions', () => {
     // sold 0.25 at cost 500 USDC -> proceeds 600 -> realized +100
     expect(p.realizedQuote).toBe(100_000_000n)
     expect(p.quantity).toBe(250_000_000_000_000_000n)
+  })
+
+  test('selling more than was bought through the contract never makes a negative position or phantom PnL', () => {
+    // bought 0.5 for 1000 USDC, then sold 1.0 (half of it untracked) for 3000 USDC
+    const sell: OrderView = { ...baseOrder, id: 3n, side: Side.SELL, amountIn: 1_000_000_000_000_000_000n, amountOut: 3_000_000_000n }
+    const [p] = computePositions([baseOrder, sell], [], dec)
+    expect(p.quantity).toBe(0n)
+    // tracked half: proceeds 1500, cost 1000 -> +500
+    expect(p.realizedQuote).toBe(500_000_000n)
+    // nothing bought at all: a sell has no cost basis, so it is not booked as profit
+    const [q] = computePositions([sell], [], dec)
+    expect(q.quantity).toBe(0n)
+    expect(q.realizedQuote).toBe(0n)
   })
 
   test('open or cancelled orders do not create positions; DCA fills do', () => {

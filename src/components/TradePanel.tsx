@@ -41,13 +41,11 @@ export function TradePanel({ network, base, oracle }: { network: NetworkConfig; 
   let blocker: { title: string; body: string } | null = null
   if (kind !== 'market') {
     if (!network.ordersAddress) {
-      blocker = { title: 'Order contract not configured', body: `Set VITE_ORDERS_ADDRESS_${network.key === 'arc' ? 'ARC_MAINNET' : 'ARC_TESTNET'} in .env after deploying ArcTradeOrders.` }
+      blocker = { title: 'Orders are not available here yet', body: 'The order contract is not configured for this network. Market swaps still work where a router exists.' }
     } else if (oracle?.status === 'no-feed') {
       blocker = {
         title: `No oracle feed for ${base?.symbol ?? 'this token'}`,
-        body: network.oracle.supported
-          ? 'The contract owner has not configured a Chainlink feed for this token yet. Orders need a validated price, so they are disabled.'
-          : network.oracle.reason + ' Conditional orders need a validated onchain price, so this token cannot be traded here.',
+        body: 'Orders need a validated onchain price and this token has no feed on the contract yet.',
       }
     } else if (oracle?.status === 'unavailable') {
       blocker = { title: 'Oracle price unavailable', body: oracle.message }
@@ -84,11 +82,7 @@ export function TradePanel({ network, base, oracle }: { network: NetworkConfig; 
       </div>
 
       {!ctx ? (
-        <Notice tone="warn" title="No tradable tokens configured on this network">
-          {network.key === 'arc'
-            ? 'Arc mainnet tokens and their oracle feeds are not configured yet. Add them to src/trading/networks.ts and on the contract after you review the mainnet setup.'
-            : 'Select a token.'}
-        </Notice>
+        <Notice tone="warn" title="No tradable tokens on this network">Select a token.</Notice>
       ) : blocker ? (
         <Notice tone="warn" title={blocker.title}>
           {blocker.body}
@@ -104,7 +98,7 @@ export function TradePanel({ network, base, oracle }: { network: NetworkConfig; 
       {kind !== 'market' && !blocker && (
         <div className="mt-3">
           <Notice>
-            Orders execute when a keeper submits them. {health.data?.keeper.running ? 'The built-in keeper is running.' : 'The built-in keeper is not running; any third party can run one.'}
+            Orders fill when a keeper submits them, even with your browser closed. {health.data?.keeper.running ? 'The built-in keeper is running.' : 'The built-in keeper is not running, so orders wait until a keeper runs.'}
           </Notice>
         </div>
       )}

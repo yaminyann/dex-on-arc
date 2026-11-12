@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAccount, usePublicClient } from 'wagmi'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { erc20Abi, parseUnits } from 'viem'
-import { FlaskConical } from 'lucide-react'
+import { ChevronDown, FlaskConical } from 'lucide-react'
 import type { NetworkConfig, TokenInfo } from '@/trading/networks'
 import { useTx } from '@/trading/tx'
 import { formatToken } from '@/trading/math'
@@ -23,6 +23,7 @@ export function TestnetTools({ network, base }: { network: NetworkConfig; base: 
   const tx = useTx(network)
   const qc = useQueryClient()
   const [price, setPrice] = useState('')
+  const [open, setOpen] = useState(false)
 
   const feed = base?.testFeed
   const state = useQuery({
@@ -62,16 +63,24 @@ export function TestnetTools({ network, base }: { network: NetworkConfig; base: 
   }
 
   return (
-    <Panel className="p-4">
-      <div className="mb-1 flex items-center gap-2">
+    <Panel>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-2 px-4 py-3 text-left"
+      >
         <FlaskConical className="h-4 w-4 text-warn" />
-        <h3 className="font-display text-sm font-semibold">Testnet tools</h3>
-      </div>
-      <p className="mb-3 text-xs text-mute">
-        {base.symbol} is a test token with a public test price. Move the price to trigger your stop, limit and trailing orders; a keeper then fills them through the test router.
-      </p>
+        <span className="font-display text-sm font-semibold">Testnet tools</span>
+        <span className="num ml-auto text-xs text-mute">{current !== null ? `${base.symbol} $${current.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : ''}</span>
+        <ChevronDown className={`h-4 w-4 text-mute transition ${open ? 'rotate-180' : ''}`} />
+      </button>
 
-      <div className="space-y-3 text-xs">
+      {open && (
+      <div className="space-y-3 border-t border-line p-4 text-xs">
+        <p className="text-mute">
+          {base.symbol} follows a public test price. Move it to trigger your stop, limit and trailing orders; a keeper then fills them through the test router.
+        </p>
         <div className="flex items-center justify-between gap-2">
           <span className="text-mute">Test price</span>
           <span className="num font-medium">{current !== null ? `$${current.toLocaleString(undefined, { maximumFractionDigits: 4 })}` : '-'}</span>
@@ -115,9 +124,10 @@ export function TestnetTools({ network, base }: { network: NetworkConfig; base: 
           <span className="num">{state.data ? formatToken(state.data.routerUsdc, network.quote.decimals, 2) : '-'} USDC</span>
         </div>
         {state.data && state.data.routerUsdc < 5_000_000n && (
-          <Notice tone="warn">The test router is low on USDC, so sells may fail. Send it some test USDC from the Get test USDC button, then transfer to the router address.</Notice>
+          <Notice tone="warn">The test router is low on USDC, so large sells may fail. Send test USDC to {network.testHarness.router.slice(0, 6)}...{network.testHarness.router.slice(-4)} to refill it.</Notice>
         )}
       </div>
+      )}
     </Panel>
   )
 }

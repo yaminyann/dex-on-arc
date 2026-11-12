@@ -1,16 +1,19 @@
 import { useAccount } from 'wagmi'
+import { tradableBases } from '@/trading/networks'
 import { useBalances, useDcas, useExecutionLogs, useOraclePrices, useOrders } from '@/trading/hooks'
 import type { NetworkConfig } from '@/trading/networks'
 import { averagePrice18, formatPrice18, formatToken, quoteForBase, pctDiff } from '@/trading/math'
 import { computePositions, unrealizedQuote } from '@/trading/portfolio'
 import { DcaStatus, Side, Status } from '@/trading/types'
 import { fmtPct } from '@/trading/format'
-import { Empty, Notice, Panel, Skeleton } from './ui'
+import { Empty, Panel, Skeleton } from './ui'
+import { NetworkBanner } from './NetworkBanner'
 import { TokenBase } from './TokenIcon'
 import { lookupToken, Table } from './OrderTables'
 
 export function Portfolio({ network }: { network: NetworkConfig }) {
   const { address } = useAccount()
+  const tradable = tradableBases(network).map((t) => t.address.toLowerCase())
   const tokens = [network.quote, ...network.bases]
   const balances = useBalances(network, address)
   const orders = useOrders(network, address)
@@ -20,9 +23,12 @@ export function Portfolio({ network }: { network: NetworkConfig }) {
 
   if (!address) {
     return (
-      <Panel>
-        <Empty title="Connect a wallet">The portfolio reads your real balances and fills from {network.label}.</Empty>
-      </Panel>
+      <div className="space-y-4">
+        <NetworkBanner network={network} />
+        <Panel>
+          <Empty title="Connect a wallet">Your balances, escrowed funds and PnL on {network.label} appear here.</Empty>
+        </Panel>
+      </div>
     )
   }
 
@@ -54,30 +60,30 @@ export function Portfolio({ network }: { network: NetworkConfig }) {
     else if (all > 0n) unpriced++
     return { t, avail, lock, value }
   })
+  // Only USDC, tradable tokens and anything you actually hold. Empty rows for untradable tokens are noise.
+  const shown = rows.filter((r) => r.t.address === q.address || tradable.includes(r.t.address.toLowerCase()) || r.avail + r.lock > 0n)
 
   const positions = computePositions(orderList, dcaList, { base: (a) => lookupToken(network, a)?.decimals, quote: q.decimals })
   let realized = 0n
   let unrealized = 0n
-  let spent = 0n
   for (const p of positions) {
     const t = lookupToken(network, p.base)
     realized += p.realizedQuote
-    spent += p.spentQuote
     const o = prices[p.base]
     if (t && o?.status === 'ok') unrealized += unrealizedQuote(p, o.price18, t.decimals, q.decimals)
   }
-  const usd = (v: bigint) => `${v < 0n ? '-' : ''}${formatToken(v < 0n ? -v : v, q.decimals, 2)} USDC`
+  const usd = (v: bigint) => `${formatToken(v, q.decimals, 2)} USDC`
   const tone = (v: bigint) => (v >= 0n ? 'text-up' : 'text-down')
 
   const loading = balances.isLoading
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <NetworkBanner network={network} />
+      <div className="grid gap-4 sm:grid-cols-3">
         <Stat label="Total value" value={loading ? null : usd(total)} sub={unpriced ? `${unpriced} token(s) without an oracle price are excluded` : 'Balances plus escrow, at oracle prices'} />
         <Stat label="Realized PnL" value={usd(realized)} tone={tone(realized)} sub="From orders filled through the contract" />
         <Stat label="Unrealized PnL" value={usd(unrealized)} tone={tone(unrealized)} sub="Open tracked positions at oracle price" />
-        <Stat label="Total spent buying" value={usd(spent)} sub="Orders and DCA fills" />
       </div>
 
       <Panel>
@@ -91,7 +97,7 @@ export function Portfolio({ network }: { network: NetworkConfig }) {
           <Table
             head={['Token', 'Available', 'Locked in orders', 'Total', 'Value']}
             empty={{ title: 'No tokens', body: '' }}
-            rows={rows.map((r) => [
+            rows={shown.map((r) => [
               <span key="t" className="flex items-center gap-2">
                 <TokenBase token={r.t} size={18} />
                 {r.t.symbol}
@@ -103,37 +109,39 @@ export function Portfolio({ network }: { network: NetworkConfig }) {
             ])}
           />
         )}
-        <div className="px-4 pb-3 pt-1 text-[11px] text-mute">Single USDC balance shown from the ERC-20 view; on Arc it is the same pool as the gas balance.</div>
+        <div className="px-4 pb-3 pt-1 text-[11px] text-mute">USDC is also your gas balance on Arc, so there is only one USDC pool.</div>
       </Panel>
 
-      <Panel>
-        <div className="border-b border-line px-4 py-3 font-display text-sm font-semibold">DCA performance</div>
-        <Table
-          head={['Token', 'Status', 'Buys', 'Spent', 'Bought', 'Avg. entry', 'Oracle price', 'Vs entry']}
-          empty={{ title: 'No DCA plans', body: 'Create a recurring buy from the Trade page.' }}
-          rows={dcaList.map((d) => {
-            const t = lookupToken(network, d.base)
-            const avg = t ? averagePrice18(d.totalSpent, d.totalBought, t.decimals, q.decimals) : 0n
-            const o = prices[d.base.toLowerCase()]
-            const now = o?.status === 'ok' ? o.price18 : null
-            const diff = now !== null && avg > 0n ? pctDiff(now, avg) : null
-            return [
-              t?.symbol ?? '-',
-              d.status === DcaStatus.ACTIVE ? 'Active' : d.status === DcaStatus.PAUSED ? 'Paused' : d.status === DcaStatus.COMPLETED ? 'Completed' : 'Cancelled',
-              d.executions,
-              usd(d.totalSpent),
-              t ? `${formatToken(d.totalBought, t.decimals, 6)} ${t.symbol}` : '-',
-              avg > 0n ? formatPrice18(avg) : '-',
-              now !== null ? formatPrice18(now) : '-',
-              diff !== null ? <span key="d" className={diff >= 0 ? 'text-up' : 'text-down'}>{fmtPct(diff)}</span> : '-',
-            ]
-          })}
-        />
-      </Panel>
+      {dcaList.length > 0 && (
+        <Panel>
+          <div className="border-b border-line px-4 py-3 font-display text-sm font-semibold">DCA performance</div>
+          <Table
+            head={['Token', 'Status', 'Buys', 'Spent', 'Bought', 'Avg. entry', 'Oracle price', 'Vs entry']}
+            empty={{ title: 'No DCA plans', body: 'Create a recurring buy from the Trade page.' }}
+            rows={dcaList.map((d) => {
+              const t = lookupToken(network, d.base)
+              const avg = t ? averagePrice18(d.totalSpent, d.totalBought, t.decimals, q.decimals) : 0n
+              const o = prices[d.base.toLowerCase()]
+              const now = o?.status === 'ok' ? o.price18 : null
+              const diff = now !== null && avg > 0n ? pctDiff(now, avg) : null
+              return [
+                t?.symbol ?? '-',
+                d.status === DcaStatus.ACTIVE ? 'Active' : d.status === DcaStatus.PAUSED ? 'Paused' : d.status === DcaStatus.COMPLETED ? 'Completed' : 'Cancelled',
+                d.executions,
+                usd(d.totalSpent),
+                t ? `${formatToken(d.totalBought, t.decimals, 6)} ${t.symbol}` : '-',
+                avg > 0n ? formatPrice18(avg) : '-',
+                now !== null ? formatPrice18(now) : '-',
+                diff !== null ? <span key="d" className={diff >= 0 ? 'text-up' : 'text-down'}>{fmtPct(diff)}</span> : '-',
+              ]
+            })}
+          />
+        </Panel>
+      )}
 
-      <Notice>
-        Keeper fees paid are listed per fill on the Trade page. {logs.data?.partial ? 'Fee history may be incomplete because the RPC limited the log range.' : ''} PnL covers contract fills only.
-      </Notice>
+      <p className="text-[11px] text-mute">
+        PnL covers fills made through the order contract. Keeper fees are listed per fill under Trades on the Trade page.{logs.data?.partial ? ' Fee history may be incomplete because the RPC limited the log range.' : ''}
+      </p>
     </div>
   )
 }

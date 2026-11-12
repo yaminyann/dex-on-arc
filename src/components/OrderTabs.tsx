@@ -10,23 +10,19 @@ import { ordersAbi } from '@/trading/ordersAbi'
 import { averagePrice18, formatPrice18, formatToken } from '@/trading/math'
 import { computePositions, unrealizedQuote, type Position } from '@/trading/portfolio'
 import { fmtDateTime } from '@/trading/format'
-import { ORDER_TYPE_LABEL, OrderType, Side, Status, type DcaView, type OrderView } from '@/trading/types'
+import { ORDER_TYPE_LABEL, Side, Status, type DcaView, type OrderView } from '@/trading/types'
 import type { NetworkConfig } from '@/trading/networks'
 import { Empty, Notice, Panel, Skeleton } from './ui'
 import { DcaTable, OpenOrdersTable, OrderHistoryTable, Table, TxLink, lookupToken } from './OrderTables'
 
 const TABS = [
   { id: 'open', label: 'Open orders' },
+  { id: 'dca', label: 'DCA plans' },
   { id: 'history', label: 'Order history' },
-  { id: 'trades', label: 'Trade history' },
+  { id: 'trades', label: 'Trades' },
   { id: 'positions', label: 'Positions' },
-  { id: 'dca', label: 'DCA strategies' },
-  { id: 'protect', label: 'Stop-loss / Take-profit' },
-  { id: 'failed', label: 'Failed / expired' },
 ] as const
 type TabId = (typeof TABS)[number]['id']
-
-const PROTECTIVE: number[] = [OrderType.STOP_LOSS, OrderType.TAKE_PROFIT, OrderType.STOP_LIMIT, OrderType.TRAILING_STOP, OrderType.OCO]
 
 export function OrderTabs({ network }: { network: NetworkConfig }) {
   const { address } = useAccount()
@@ -68,17 +64,29 @@ export function OrderTabs({ network }: { network: NetworkConfig }) {
   else if (orders.isError || dcas.isError) body = <div className="p-4"><Notice tone="error" title="Could not read orders">The RPC request failed. It will retry automatically.</Notice></div>
   else {
     switch (tab) {
-      case 'open':
+      case 'open': {
+        // Ready to execute but not yet filled: no keeper has picked them up, or the market is worse than the limit.
+        const stuck = all.filter((o) => o.status === Status.OPEN && now < o.expiry && o.reasonCode === 0)
         body = (
-          <OpenOrdersTable
-            network={network}
-            orders={all.filter((o) => o.status === Status.OPEN)}
-            busy={tx.busy}
-            onCancel={(id) => void act('Cancel order', 'cancelOrder', id)}
-            onExpire={(id) => void act('Refund expired order', 'expireOrder', id)}
-          />
+          <>
+            {stuck.length > 0 && (
+              <div className="px-3 pt-3">
+                <Notice tone="warn" title={`${stuck.length} order(s) ready but not filled yet`}>
+                  They wait for a keeper. If the market is worse than your limit or minimum output they stay open until they expire; you can cancel and get the escrow back at any time.
+                </Notice>
+              </div>
+            )}
+            <OpenOrdersTable
+              network={network}
+              orders={all.filter((o) => o.status === Status.OPEN)}
+              busy={tx.busy}
+              onCancel={(id) => void act('Cancel order', 'cancelOrder', id)}
+              onExpire={(id) => void act('Refund expired order', 'expireOrder', id)}
+            />
+          </>
         )
         break
+      }
       case 'history':
         body = <OrderHistoryTable network={network} orders={all.filter((o) => o.status !== Status.OPEN)} logs={logList} />
         break
@@ -176,32 +184,6 @@ export function OrderTabs({ network }: { network: NetworkConfig }) {
       case 'dca':
         body = <DcaTable network={network} dcas={dcaList} busy={tx.busy} onAction={(fn, id) => void act(fn === 'pauseDca' ? 'Pause plan' : fn === 'resumeDca' ? 'Resume plan' : 'Cancel plan', fn, id)} />
         break
-      case 'protect':
-        body = (
-          <OrderHistoryTable
-            network={network}
-            orders={all.filter((o) => PROTECTIVE.includes(o.orderType))}
-            logs={logList}
-          />
-        )
-        break
-      case 'failed': {
-        const failed = all.filter((o) => o.status === Status.EXPIRED || (o.status === Status.OPEN && now >= o.expiry))
-        const stuck = all.filter((o) => o.status === Status.OPEN && now < o.expiry && o.reasonCode === 0)
-        body = (
-          <>
-            {stuck.length > 0 && (
-              <div className="px-3 pt-3">
-                <Notice tone="warn" title={`${stuck.length} order(s) are triggered but not yet filled`}>
-                  They wait for a keeper. If the market is worse than your limit or minimum output, they stay open until they expire.
-                </Notice>
-              </div>
-            )}
-            <OrderHistoryTable network={network} orders={failed} logs={logList} />
-          </>
-        )
-        break
-      }
     }
   }
 

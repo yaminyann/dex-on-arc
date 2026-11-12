@@ -46,7 +46,7 @@ Through the dev proxy, use `/api/health` and `/api/metrics` on the app's port.
 | Trade controls disabled on testnet | No oracle and no 0x on testnet | Expected. Use your own deployment with a feed, or use mainnet after review |
 | "No oracle feed for TOKEN" | Feed not applied on the contract | Queue the feed, wait the delay, apply it |
 | "Oracle price is stale" | Feed older than `maxStaleness` | Check the feed on Chainlink's explorer; raise staleness only if the heartbeat justifies it |
-| Order created but never executes | No keeper running, trigger not met, or unfavourable market vs minimum | Check Automation card and the order's status text; start a keeper |
+| Order created but never executes | No keeper running, trigger not met, or unfavourable market vs minimum | Check the keeper line under the order form and the order's status text; start a keeper |
 | Trailing stop sits low | Nobody called `pokeTrailing` during the rally | Run a keeper; it records highs each tick |
 | Quote form says offline | Backend not running or the proxy target is wrong | `bun run server`; confirm port 3001 |
 | 429 from the backend | Rate limit | Wait for `retry-after`; reduce polling |

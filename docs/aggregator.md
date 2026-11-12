@@ -58,10 +58,6 @@ A `null` result means no liquidity. Errors are thrown as `AggregatorError` with 
 4. Allowlist the provider's swap target on the contract (queue, wait for the delay, apply). The keeper checks `swapTargets(target)` before sending.
 5. Add unit tests for response parsing like the 0x tests in `tests/trading.test.ts`.
 
-## Swap depth panel
-
-Because Arc liquidity is AMM-based there is no order book. The depth panel requests indicative prices for buying with 100, 1,000 and 10,000 USDC and shows the average price and the impact relative to the smallest size. It needs a connected wallet (0x requires a taker), a configured API key and a supported network.
-
 ## Fees
 
 0x can charge integrator fees if you configure them; this project does not. The keeper fee (up to 0.10% of output) is separate and enforced by the contract.

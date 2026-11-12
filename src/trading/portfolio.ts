@@ -61,13 +61,17 @@ export function computePositions(orders: OrderView[], dcas: DcaView[], dec: Deci
   for (const p of map.values()) {
     const bd = dec.base(p.base)
     if (bd === undefined) continue
-    p.quantity = p.bought - p.sold
+    // A sell can exceed what was bought through the contract (tokens from a faucet, a wallet swap or
+    // another device). Only the part with a known cost basis counts: the quantity never goes negative
+    // and the rest of the proceeds are left out of realized PnL instead of being booked as pure gain.
+    p.quantity = p.bought > p.sold ? p.bought - p.sold : 0n
     if (p.bought > 0n) {
       p.avgEntry18 = (p.spentQuote * WAD * 10n ** BigInt(bd)) / (p.bought * 10n ** BigInt(dec.quote))
-      const costOfSold = (p.sold * p.spentQuote) / p.bought
-      p.realizedQuote = p.receivedQuote - costOfSold
+      const tracked = p.sold < p.bought ? p.sold : p.bought
+      const proceeds = p.sold > 0n ? (p.receivedQuote * tracked) / p.sold : 0n
+      p.realizedQuote = proceeds - (tracked * p.spentQuote) / p.bought
     } else {
-      p.realizedQuote = p.receivedQuote
+      p.realizedQuote = 0n
     }
     out.push(p)
   }

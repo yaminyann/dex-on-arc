@@ -8,7 +8,7 @@ import { formatPrice18 } from '@/trading/math'
 import { fmtNum, fmtPct, priceFmt } from '@/trading/format'
 import { Skeleton } from './ui'
 
-export function TokenSelector({ network, value, onChange }: { network: NetworkConfig; value: TokenInfo | undefined; onChange: (t: TokenInfo) => void }) {
+export function TokenSelector({ network, bases, value, onChange }: { network: NetworkConfig; bases: TokenInfo[]; value: TokenInfo | undefined; onChange: (t: TokenInfo) => void }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -16,7 +16,7 @@ export function TokenSelector({ network, value, onChange }: { network: NetworkCo
     document.addEventListener('mousedown', close)
     return () => document.removeEventListener('mousedown', close)
   }, [])
-  const disabled = network.bases.length === 0
+  const disabled = bases.length <= 1
   return (
     <div className="relative" ref={ref}>
       <button
@@ -24,7 +24,7 @@ export function TokenSelector({ network, value, onChange }: { network: NetworkCo
         aria-haspopup="listbox"
         aria-expanded={open}
         disabled={disabled}
-        className="flex min-h-[44px] items-center gap-2 rounded-lg border border-line bg-raised px-3 text-left hover:border-accent/50 disabled:opacity-60"
+        className="flex min-h-[44px] items-center gap-2 rounded-lg border border-line bg-raised px-3 text-left enabled:hover:border-accent/50 disabled:cursor-default"
       >
         {value ? (
           <>
@@ -39,7 +39,7 @@ export function TokenSelector({ network, value, onChange }: { network: NetworkCo
       </button>
       {open && (
         <ul role="listbox" className="absolute left-0 top-full z-30 mt-1 min-w-[240px] rounded-xl border border-line bg-panel p-1 shadow-xl">
-          {network.bases.map((t) => (
+          {bases.map((t) => (
             <li key={t.address}>
               <button
                 role="option"

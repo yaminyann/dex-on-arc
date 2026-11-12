@@ -211,7 +211,7 @@ export function ConditionalForm({ ctx, kind }: { ctx: TradeCtx; kind: Conditiona
       {kind === 'oco' && <Notice>One escrow, two exits: whichever price is hit first executes, and the other can never run.</Notice>}
 
       <Button variant={buy ? 'buy' : 'sell'} className="w-full" disabled={!ready || !address} onClick={() => setConfirm(true)}>
-        {!address ? 'Connect wallet' : `Review ${ORDER_TYPE_LABEL[KIND_TYPE[kind]].toLowerCase()} order`}
+        {!address ? 'Connect wallet' : `Review ${ORDER_TYPE_LABEL[KIND_TYPE[kind]]} order`}
       </Button>
 
       <ConfirmModal
