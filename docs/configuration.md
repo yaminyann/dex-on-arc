@@ -38,6 +38,11 @@ Changing a `VITE_` variable needs a dev-server restart.
 | `KYBER_ROUTER_ALLOWLIST` | KyberSwap router | Comma-separated router addresses the backend accepts from KyberSwap. Anything else is refused |
 | `PLATFORM_FEE_BPS` | `0` | Fee on browser market swaps in basis points of the sell amount (0 = off, max 100). Paid by the aggregator to `PLATFORM_FEE_RECIPIENT` inside the swap. Not charged on orders, DCA, keepers or testnet. See [admin-guide.md](admin-guide.md) |
 | `PLATFORM_FEE_RECIPIENT` | none | Address that receives the swap fee. Required when `PLATFORM_FEE_BPS` > 0. An invalid fee setting turns the fee off and logs a warning |
+| `AGENT_LLM_URL` | none | Optional. Base URL of an OpenAI-compatible chat API (for example local Ollama `http://localhost:11434/v1`). With `AGENT_LLM_MODEL` it switches on `POST /agent-chat`. Unset: the Agent uses its built-in rules only |
+| `AGENT_LLM_MODEL` | none | Model name for the endpoint above |
+| `AGENT_LLM_API_KEY` | none | Bearer key if the endpoint needs one. Never sent to the browser |
+| `AGENT_LLM_DAILY_CALLS` | `2000` | Global limit of model calls per UTC day |
+| `AGENT_LLM_TIMEOUT_MS` | `12000` | Per-call timeout (1000 to 30000) |
 | `ALERT_WEBHOOK_URL` | none | Receives `{"text": "..."}` for keeper and provider alerts (deduplicated, secrets redacted) |
 | `VITE_SWAP_TARGETS_ARC` | none | Frontend. Extra reviewed swap contracts (comma-separated) allowed for market swaps on Arc mainnet, in addition to the 0x AllowanceHolder |
 

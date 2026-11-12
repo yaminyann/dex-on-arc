@@ -189,17 +189,17 @@ export function OrderTabs({ network }: { network: NetworkConfig }) {
 
   return (
     <Panel>
-      <div className="thin-scroll flex gap-1 overflow-x-auto border-b border-line px-2 pt-2" role="tablist" aria-label="Orders">
+      <div className="thin-scroll flex overflow-x-auto border-b border-line" role="tablist" aria-label="Orders">
         {TABS.map((t) => (
           <button
             key={t.id}
             role="tab"
             aria-selected={tab === t.id}
             onClick={() => setTab(t.id)}
-            className={clsx('flex min-h-[38px] items-center gap-1.5 whitespace-nowrap border-b-2 px-3 text-xs transition', tab === t.id ? 'border-accent text-ink' : 'border-transparent text-mute hover:text-ink')}
+            className={clsx('flex min-h-[44px] items-center gap-1.5 whitespace-nowrap border-r border-line px-4 text-xs font-bold', tab === t.id ? 'bg-accent text-accent-ink' : 'bg-panel hover:bg-raised')}
           >
             {t.label}
-            {counts[t.id] ? <span className="num rounded bg-raised px-1.5 text-[10px]">{counts[t.id]}</span> : null}
+            {counts[t.id] ? <span className="num border border-line bg-panel px-1.5 text-[10px] text-ink">{counts[t.id]}</span> : null}
           </button>
         ))}
       </div>

@@ -60,7 +60,7 @@ export function PriceChart({ candles, loading, error, timeframe, onTimeframe, so
     })
     volRef.current = chart.addSeries(HistogramSeries, { priceFormat: { type: 'volume' }, priceScaleId: 'vol' })
     chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } })
-    closeRef.current = chart.addSeries(LineSeries, { color: cssRgb('accent'), lineWidth: 2, priceLineVisible: true, lastValueVisible: true, visible: false })
+    closeRef.current = chart.addSeries(LineSeries, { color: cssRgb('fg'), lineWidth: 2, priceLineVisible: true, lastValueVisible: true, visible: false })
     smaRef.current = chart.addSeries(LineSeries, { color: cssRgb('warn'), lineWidth: 1, priceLineVisible: false, lastValueVisible: false })
     return () => {
       chart.remove()
@@ -77,7 +77,7 @@ export function PriceChart({ candles, loading, error, timeframe, onTimeframe, so
     })
     candleRef.current?.applyOptions({ upColor: cssRgb('up'), downColor: cssRgb('down'), wickUpColor: cssRgb('up'), wickDownColor: cssRgb('down') })
     smaRef.current?.applyOptions({ color: cssRgb('warn') })
-    closeRef.current?.applyOptions({ color: cssRgb('accent') })
+    closeRef.current?.applyOptions({ color: cssRgb('fg') })
   }, [theme, accent])
 
   const sma20 = useMemo(() => sma(candles, 20), [candles])
@@ -126,7 +126,7 @@ export function PriceChart({ candles, loading, error, timeframe, onTimeframe, so
               key={label}
               onClick={() => set(!on)}
               aria-pressed={on}
-              className={clsx('min-h-[30px] rounded-md border px-2 transition', on ? 'border-accent/60 text-accent' : 'border-line text-mute hover:text-ink')}
+              className={clsx('min-h-[36px] border border-line px-3 font-bold', on ? 'bg-accent text-accent-ink' : 'bg-panel hover:bg-raised')}
             >
               {label}
             </button>
@@ -149,7 +149,7 @@ export function PriceChart({ candles, loading, error, timeframe, onTimeframe, so
       <div className="flex items-center justify-between border-t border-line px-3 py-1.5 text-[11px] text-mute">
         <span>{source ? `Reference chart: Coinbase ${source}. Not an Arc pool price.` : 'No reference market for this asset.'}</span>
         <span className={clsx('flex items-center gap-1', live && 'text-up')}>
-          <span className={clsx('h-1.5 w-1.5 rounded-full', live ? 'bg-up' : 'bg-mute/50')} />
+          <span className={clsx('h-2 w-2', live ? 'bg-up' : 'bg-mute')} aria-hidden="true" />
           {live ? 'Live' : 'Not streaming'}
         </span>
       </div>

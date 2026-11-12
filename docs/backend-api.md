@@ -19,7 +19,11 @@ Provider and keeper status for the UI.
 }
 ```
 
-`/health` also reports `platformFee` (`{ "bps": 30 }` or `null`). Operators additionally get `platformFee.recipient` and `platformFeeProblem` (why a configured fee was turned off).
+`/health` also reports `agentChat` (`{ "enabled": true }` when the optional chat model is configured) and `platformFee` (`{ "bps": 30 }` or `null`). Operators additionally get `platformFee.recipient` and `platformFeeProblem` (why a configured fee was turned off).
+
+### `POST /agent-chat`
+
+Optional. Body `{ "text": string (1 to 300 chars), "tokens": string[] (symbols, at most 80), "quote": string }`. Returns `{ "reply": string, "command": string | null }`, where `command` is a single line that already passed the strict command parser. Errors: `503 AGENT_CHAT_DISABLED` (not configured), `400 INPUT_INVALID`, `413` (body over 4 KB), `429 AGENT_CHAT_BUDGET` (daily budget used) or `RATE_LIMITED`, `502 AGENT_CHAT_UNAVAILABLE` (the model did not answer). See [agent-station.md](agent-station.md).
 
 ### `GET /tokens?chainId=5042`
 
@@ -120,6 +124,7 @@ Fixed one-minute windows per client (the socket address, or the trusted-proxy ad
 | --- | --- |
 | `/price` | 90 |
 | `/quote` | 20 |
+| `/agent-chat` | 12 |
 | everything else | 240 |
 
 Limits scale with `RATE_LIMIT_SCALE`. Over the limit the server returns `429` with `retry-after` seconds.

@@ -55,7 +55,7 @@ export function TradePanel({ network, base, oracle }: { network: NetworkConfig; 
   return (
     <Panel className="p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="font-display text-sm font-semibold">Trade</h2>
+        <h2 className="text-xl">Trade</h2>
         <Segmented
           value={side}
           onChange={setSide}
@@ -67,14 +67,14 @@ export function TradePanel({ network, base, oracle }: { network: NetworkConfig; 
         />
       </div>
 
-      <div className="thin-scroll -mx-1 mb-3 flex gap-1 overflow-x-auto px-1 pb-1" role="tablist" aria-label="Order type">
+      <div className="mb-3 flex flex-wrap gap-1" role="tablist" aria-label="Order type">
         {KINDS.map((k) => (
           <button
             key={k.id}
             role="tab"
             aria-selected={k.id === kind}
             onClick={() => setKind(k.id)}
-            className={`min-h-[32px] whitespace-nowrap rounded-md border px-2.5 text-xs transition ${k.id === kind ? 'border-accent/60 bg-raised text-ink' : 'border-transparent text-mute hover:text-ink'}`}
+            className={`min-h-[40px] whitespace-nowrap border px-3 text-xs font-bold ${k.id === kind ? 'border-line bg-accent text-accent-ink' : 'border-line/30 hover:border-line hover:bg-raised'}`}
           >
             {k.label}
           </button>

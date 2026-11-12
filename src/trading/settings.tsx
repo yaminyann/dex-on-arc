@@ -2,13 +2,16 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import type { NetworkKey } from './networks'
 import type { Timeframe } from './market'
 import { DEFAULT_AGENT, sanitizePermission, type AgentPermission } from './agent-permission'
+import { timePrefs } from './format'
 
 export type ThemePref = 'dark' | 'light' | 'system'
 export type Theme = 'dark' | 'light'
-export type Accent = 'iris' | 'sky' | 'ember' | 'orchid' | 'gold'
+export type Accent = 'lavender' | 'peach' | 'rose' | 'sky' | 'butter'
 export type Scale = 'sm' | 'md' | 'lg'
 export type DefaultOrderType = 'market' | 'limit'
-export type Page = 'home' | 'trade' | 'dashboard' | 'agent' | 'admin'
+export type Page = 'home' | 'trade' | 'dashboard' | 'agent' | 'settings' | 'admin'
+export type TimeFormat = '24h' | '12h'
+export type TimeZoneMode = 'local' | 'utc'
 export type StartPage = 'home' | 'trade' | 'dashboard'
 export type Motion = 'full' | 'reduced' | 'off'
 export type Density = 'comfortable' | 'compact'
@@ -16,19 +19,22 @@ export type ChartType = 'candles' | 'line'
 export type ToastPosition = 'top-center' | 'bottom-center' | 'bottom-right'
 export type ToastMode = 'all' | 'errors' | 'off'
 
-export const PAGES: Page[] = ['home', 'trade', 'dashboard', 'agent', 'admin']
+export const PAGES: Page[] = ['home', 'trade', 'dashboard', 'agent', 'settings', 'admin']
 
 /**
- * Accent colours as space-separated RGB for each theme: [main, text on main, second colour for gradients].
- * The second colour is what makes headlines and glows read as a gradient instead of a flat tint.
+ * Accent colours as a flat fill (RGB). Text on an accent is always ink, which keeps at least 8:1
+ * contrast on every one of them in both themes. The accent is never used as text colour.
  */
-export const ACCENTS: Record<Accent, { label: string; dark: [string, string, string]; light: [string, string, string] }> = {
-  iris: { label: 'Iris', dark: ['139 124 255', '12 8 40', '96 205 255'], light: ['91 71 232', '255 255 255', '2 132 199'] },
-  sky: { label: 'Sky', dark: ['56 189 248', '4 20 36', '129 140 248'], light: ['2 132 199', '255 255 255', '79 70 229'] },
-  ember: { label: 'Ember', dark: ['251 146 60', '36 14 2', '244 63 94'], light: ['234 88 12', '255 255 255', '225 29 72'] },
-  orchid: { label: 'Orchid', dark: ['232 121 249', '36 6 44', '129 140 248'], light: ['192 38 211', '255 255 255', '79 70 229'] },
-  gold: { label: 'Gold', dark: ['250 204 21', '32 22 2', '251 146 60'], light: ['202 138 4', '255 255 255', '234 88 12'] },
+export const ACCENTS: Record<Accent, { label: string; rgb: string }> = {
+  lavender: { label: 'Soft lavender', rgb: '201 184 255' },
+  peach: { label: 'Soft peach', rgb: '255 192 154' },
+  rose: { label: 'Soft rose', rgb: '255 179 207' },
+  sky: { label: 'Soft sky', rgb: '168 216 255' },
+  butter: { label: 'Soft butter', rgb: '255 229 138' },
 }
+
+/** Names used by earlier builds, mapped to the nearest soft colour so a saved choice survives. */
+const LEGACY_ACCENTS: Record<string, Accent> = { signal: 'butter', orange: 'peach', pink: 'rose', violet: 'lavender' }
 
 export const SCALES: Record<Scale, { label: string; px: number }> = {
   sm: { label: 'Compact', px: 14 },
@@ -41,6 +47,10 @@ export const TIMEFRAME_CHOICES: Timeframe[] = ['1m', '5m', '15m', '1h', '4h', '1
 export interface Settings {
   themePref: ThemePref
   accent: Accent
+  timeFormat: TimeFormat
+  timeZone: TimeZoneMode
+  privacy: boolean
+  shortcuts: boolean
   scale: Scale
   motion: Motion
   density: Density
@@ -72,21 +82,26 @@ interface Ctx extends Settings {
   setSlippageBps: (bps: number) => void
   setExpiryDays: (d: number) => void
   setNetworkKey: (k: NetworkKey) => void
-  setPage: (p: Page) => void
+  /** `replace` swaps the current history entry, so a redirect does not trap the back button. */
+  setPage: (p: Page, opts?: { replace?: boolean }) => void
   setAgent: (p: AgentPermission) => void
   /** Replaces every stored setting from an exported file. Values are sanitised first. */
   importSettings: (raw: unknown) => void
   resetAll: () => void
 }
 
-const KEY = 'lumarc-settings-v1'
+const KEY = 'lumarc-settings-v2'
 /** Earlier builds stored settings under these keys; they are read once, never written. */
-const OLD_KEYS = ['lumarc-settings-v2', 'arc-terminal-settings-v1']
+const OLD_KEYS = ['lumarc-settings-v1', 'arc-terminal-settings-v1']
 const DEFAULT_NETWORK: NetworkKey = import.meta.env.VITE_DEFAULT_NETWORK === 'arc' ? 'arc' : 'arc-testnet'
 
 export const DEFAULTS: Settings = {
-  themePref: 'dark',
-  accent: 'iris',
+  themePref: 'light',
+  accent: 'lavender',
+  timeFormat: '24h',
+  timeZone: 'local',
+  privacy: false,
+  shortcuts: true,
   scale: 'md',
   motion: 'full',
   density: 'comfortable',
@@ -120,7 +135,11 @@ export function sanitizeSettings(raw: unknown): Settings {
   const startPage = oneOf(p.startPage, ['home', 'trade', 'dashboard'], DEFAULTS.startPage)
   return {
     themePref: oneOf(p.themePref ?? legacyTheme, ['dark', 'light', 'system'], DEFAULTS.themePref),
-    accent: oneOf(p.accent, Object.keys(ACCENTS) as Accent[], DEFAULTS.accent),
+    accent: oneOf(typeof p.accent === 'string' && Object.prototype.hasOwnProperty.call(LEGACY_ACCENTS, p.accent) ? LEGACY_ACCENTS[p.accent] : p.accent, Object.keys(ACCENTS) as Accent[], DEFAULTS.accent),
+    timeFormat: oneOf(p.timeFormat, ['24h', '12h'], DEFAULTS.timeFormat),
+    timeZone: oneOf(p.timeZone, ['local', 'utc'], DEFAULTS.timeZone),
+    privacy: p.privacy === true,
+    shortcuts: p.shortcuts !== false,
     scale: oneOf(p.scale, ['sm', 'md', 'lg'], DEFAULTS.scale),
     motion: oneOf(p.motion, ['full', 'reduced', 'off'], DEFAULTS.motion),
     density: oneOf(p.density, ['comfortable', 'compact'], DEFAULTS.density),
@@ -204,15 +223,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const root = document.documentElement
     root.classList.toggle('dark', theme === 'dark')
-    const [rgb, fg, rgb2] = ACCENTS[state.accent][theme]
-    root.style.setProperty('--accent', rgb)
-    root.style.setProperty('--accent-fg', fg)
-    root.style.setProperty('--accent2', rgb2)
+    root.style.setProperty('--accent', ACCENTS[state.accent].rgb)
+    root.style.setProperty('--accent-fg', '17 17 17')
     root.style.fontSize = `${SCALES[state.scale].px}px`
     root.dataset.density = state.density
     root.dataset.motion = animate ? state.motion : 'off'
     root.dataset.toasts = state.toasts
-  }, [theme, state.accent, state.scale, state.density, state.motion, state.toasts, animate])
+    root.dataset.privacy = state.privacy ? 'on' : 'off'
+    timePrefs.hour12 = state.timeFormat === '12h'
+    timePrefs.utc = state.timeZone === 'utc'
+  }, [theme, state.accent, state.scale, state.density, state.motion, state.toasts, state.privacy, state.timeFormat, state.timeZone, animate])
 
   useEffect(() => {
     const { page: _page, ...persisted } = state
@@ -232,10 +252,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setSlippageBps: (bps) => patch({ slippageBps: clamp(bps, 1, 1000) }),
       setExpiryDays: (d) => patch({ expiryDays: clamp(d, 1, 365) }),
       setNetworkKey: (networkKey) => patch({ networkKey }),
-      setPage: (page) => {
+      setPage: (page, opts) => {
         patch({ page })
         // Keeps the address bar in step so a page can be linked and the back button works.
-        if (pageFromHash(location.hash) !== page) location.hash = `/${page}`
+        if (pageFromHash(location.hash) === page) return
+        if (opts?.replace) history.replaceState(null, '', `#/${page}`)
+        else location.hash = `/${page}`
       },
       setAgent: (agent) => patch({ agent }),
       importSettings: (raw) => {

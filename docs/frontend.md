@@ -8,15 +8,16 @@ React 18, Vite, TypeScript, Tailwind, wagmi v2 with ConnectKit (injected wallets
 | --- | --- | --- |
 | Trade | `Terminal` | Network banner, token selector and pair stats, trade panel, chart, order tabs, collapsible testnet tools (testnet only) |
 | Dashboard | `Dashboard` | Account value, available and escrowed USDC, realized and unrealized PnL, balances (zero balances of untradable tokens hidden), every order, plan, fill and position, DCA performance |
-| Home | `Landing` | The landing page: animated hero with live facts (token count, keeper status), product illustration, token marquee, features, how it works, an animated Agent demo, security, FAQ and a closing call to action. Every number on it is real or plainly labelled an illustration |
+| Home | `Landing` | The landing page: hero with live facts (token count from the aggregator, keeper status) and an Agent demo labelled "Example session", an index of the seven order types, a who-does-what table, the Agent permission band, the routable token list, an owner can / cannot table, FAQ and a closing call. Every number on it is real or plainly labelled an illustration. A connected wallet skips this page and lands on Trade |
 | Agent | `AgentStation` | Command-driven trading with readback and one-time permission. See [agent-station.md](agent-station.md) |
+| Settings | `SettingsPage` | Look, display, trading, chart, notifications, shortcuts, agent, data and about. Own page (`/#/settings`), reached from the gear in the header or the bottom bar |
 | Admin | `Admin` | Owner only. See [admin-guide.md](admin-guide.md) |
 
-The layout follows the familiar exchange-terminal pattern (the Hyperliquid style of dense dark panels, not a copy): a price header, chart and order form on top, then the orders table beside an account box. The brand (name, tagline, social and legal links) lives in `src/brand.ts`; the logo is `Logo.tsx`.
+The layout follows the exchange-terminal pattern: a price header, chart and order form on top, then the orders table beside an account box. The look is retro / neo-brutalist; see [DESIGN.md](../DESIGN.md). The brand (name, tagline, social and legal links) lives in `src/brand.ts`; the logo is `Logo.tsx`.
 
-Pages are hash routes (`/#/trade`, `/#/agent`), so any page can be linked and the back button works. Page changes fade; the landing page animates in as it scrolls into view. Motion obeys Settings and the system "reduce motion" request (`html[data-motion]`), and "off" removes every animation and transition.
+Pages are hash routes (`/#/trade`, `/#/agent`), so any page can be linked and the back button works. Page changes fade; landing sections reveal as they scroll into view. On phones a fixed bottom tab bar (`BottomNav`) carries Home (or Trade when connected), Trade, Dashboard, Agent and Settings. Motion obeys Settings and the system "reduce motion" request (`html[data-motion]`), and "off" removes every animation and transition.
 
-Navigation, network selector (Testnet / Mainnet), wallet button, USDC balance, theme toggle and settings live in `Header`; `Footer` shows live status (backend, network, keeper), links, socials and the risk notice. Social links appear only when their `VITE_SOCIAL_*` variable is set (GitHub defaults to this repository); Terms and Privacy open a plain-language placeholder until `VITE_TERMS_URL` / `VITE_PRIVACY_URL` point at real documents.
+Navigation, network selector (Testnet / Mainnet), wallet button, USDC balance, theme toggle and settings live in `Header`; `Footer` shows live status (backend, network, keeper), links, socials and the risk notice. A page that crashes shows a recovery card with a reload button (`ErrorBoundary`) instead of a blank screen. Social links appear only when their `VITE_SOCIAL_*` variable is set (GitHub defaults to this repository); Terms and Privacy open a plain-language placeholder until `VITE_TERMS_URL` / `VITE_PRIVACY_URL` point at real documents.
 
 ### Settings
 
@@ -24,14 +25,20 @@ Every setting applies the moment it changes and is remembered in this browser (`
 
 | Tab | Settings |
 | --- | --- |
-| General | Page the app opens on (Home, Trade, Dashboard), notifications (all, errors only, off) and where they appear, the testnet note |
-| Look | Theme (dark, light, follow system), accent colour (Iris, Sky, Ember, Orchid, Gold), interface size, table density (comfortable, compact), motion (full, reduced, off) |
+| General | Page the app opens on (Home, Trade, Dashboard), network, the testnet note |
+| Look | Theme (dark, light, follow system), accent colour (soft lavender, peach, rose, sky, butter), interface size, table density, motion (full, reduced, off) |
+| Display | 12 or 24 hour time, local time or UTC, hide balances (blurs amounts) |
 | Trading | Max slippage, order expiry, which order type the form opens on |
 | Chart | Style (candles or line), default timeframe, volume bars, moving average |
+| Notifications | Which toasts show (all, errors only, off) and where they appear |
+| Shortcuts | Switch keyboard shortcuts on or off (`g` then h, t, d, a or s) |
 | Agent | Permission summary, revoke, reset today's usage |
-| Data | Export, import (validated, size-limited) and reset |
+| Data | Export, import (validated, size-limited, bad files get a plain message), clear swap history, reset all |
+| About | Network, contract and links |
 
-On small screens the trade panel sits directly under the pair header and above the chart; from the `lg` breakpoint it is a right-hand column. A network with no tokens or contract (mainnet until it is configured) shows a single "Trading is not enabled" card instead of disabled panels. Only tokens with an oracle feed are offered for trading (`tradableBases`): on testnet that is tBTC, tETH and tSOL; EURC, cirBTC and WETH only appear in the portfolio when held.
+On phones Settings is a list screen; choosing a row opens it with a back button.
+
+On phones the Trade page shows one pane at a time (Order, Chart, Orders, Account) under the pair header; from the `lg` breakpoint everything is visible and the trade panel is a right-hand column. The Agent page works the same way (Chat, Permission, Commands). A network with no tokens or contract (mainnet until it is configured) shows a single "Trading is not enabled" card instead of disabled panels. Only tokens with an oracle feed are offered for trading (`tradableBases`): on testnet that is tBTC, tETH and tSOL; EURC, cirBTC and WETH only appear in the portfolio when held.
 
 Token picker: on mainnet it lists every token the aggregator can route (about 60, loaded from `/api/tokens`, searchable by name, symbol or pasted address, with the contract address shown), so market swaps work for all of them. Tokens without a Coinbase market show the aggregator's price for a 10 USDC trade instead of a chart. Orders and DCA need an oracle feed on the contract and say so when a token has none.
 
@@ -94,11 +101,11 @@ Keeper fees per fill come from execution logs. Wallet swaps made elsewhere are n
 
 ## Design system
 
-Arc Dark by default (trading), with a light theme. Colors are CSS variables in `src/index.css` mapped to Tailwind tokens (`canvas`, `panel`, `raised`, `line`, `ink`, `mute`, `accent`, `up`, `down`, `warn`). Fonts: Space Grotesk (display), DM Sans (UI), JetBrains Mono (reserved for hashes). Numbers use tabular figures. Green and red are used only for direction. Motion respects `prefers-reduced-motion`.
+Retro / neo-brutalist, written up in [DESIGN.md](../DESIGN.md): soft mist-blue paper and ink in light, blue-black and pale ink in dark; thin 1px ink borders, radius 0 (token images stay round), small hard offset shadows (`shadow-hard`, 2 to 6px) on pressable and featured elements only; a flat accent fill with ink text on it, never accent-coloured text; no gradients, glass, glow or background grids. Colours are CSS variables in `src/index.css` mapped to Tailwind tokens (`canvas`, `panel`, `raised`, `line`, `ink`, `mute`, `accent`, `up`, `down`, `warn`). Fonts: Archivo Black (headings), Archivo (text), IBM Plex Mono (numbers, `.num`). Green and red are used only for direction. Focus is a 2px ink outline. Motion respects `prefers-reduced-motion` and Settings.
 
 ## Accessibility and responsiveness
 
-- Tap targets are at least 30 to 44 px; primary actions are 40 px or taller.
+- Tap targets are at least 44 px on phones; inputs are 16px so iOS does not zoom; the bottom bar and the page respect the safe area.
 - Tab lists use `role="tablist"` / `tab` / `aria-selected`; modals trap Escape and use `role="dialog"`.
 - Layout is two columns on large screens and a single column on tablet and mobile; tables scroll horizontally.
 

@@ -2,35 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Accent colours (--accent, --accent-fg, --accent2) are set at runtime from Settings; these are the defaults. */
+/*
+ * Neo-brutalist tokens (see DESIGN.md). Borders and text share one ink colour, so every panel edge is
+ * as dark as the text, drawn as a thin 1px line on a soft mist-blue paper. The accent pair is set at runtime from Settings; the values here are defaults.
+ * Contrast (checked with the WCAG formula): ink on paper 16:1, muted on paper 6.6:1, ink on every
+ * accent 8:1 or better.
+ */
 :root {
-  --bg: 244 245 252;
-  --panel: 255 255 255;
-  --panel2: 238 240 250;
-  --line: 221 224 240;
-  --fg: 18 20 44;
-  --muted: 98 104 138;
-  --accent: 91 71 232;
-  --accent-fg: 255 255 255;
-  --accent2: 2 132 199;
-  --up: 5 150 105;
-  --down: 220 53 69;
-  --warn: 180 110 10;
+  --bg: 231 237 246;
+  --panel: 248 250 254;
+  --panel2: 214 224 240;
+  --line: 23 26 38;
+  --fg: 23 26 38;
+  --muted: 74 82 104;
+  --accent: 201 184 255;
+  --accent-fg: 17 17 17;
+  --up: 4 105 54;
+  --down: 190 24 43;
+  --warn: 133 77 0;
   color-scheme: light;
 }
 
 .dark {
-  --bg: 8 9 20;
-  --panel: 14 16 32;
-  --panel2: 22 25 46;
-  --line: 38 42 70;
-  --fg: 236 238 250;
-  --muted: 138 144 176;
-  --accent: 139 124 255;
-  --accent-fg: 12 8 40;
-  --accent2: 96 205 255;
-  --up: 52 211 153;
-  --down: 251 113 133;
+  --bg: 19 21 29;
+  --panel: 29 32 43;
+  --panel2: 43 47 62;
+  --line: 196 204 224;
+  --fg: 236 240 250;
+  --muted: 160 168 190;
+  --accent: 201 184 255;
+  --accent-fg: 17 17 17;
+  --up: 74 222 128;
+  --down: 255 107 125;
   --warn: 251 191 36;
   color-scheme: dark;
 }
@@ -42,116 +45,113 @@
 body {
   margin: 0;
   min-height: 100dvh;
-  font-family: 'DM Sans', sans-serif;
-  background:
-    radial-gradient(900px 480px at 85% -8%, rgb(var(--accent) / 0.1), transparent 60%),
-    radial-gradient(700px 420px at 0% 0%, rgb(var(--accent2) / 0.07), transparent 55%),
-    rgb(var(--bg));
-  background-attachment: fixed;
+  font-family: 'Archivo', sans-serif;
+  background: rgb(var(--bg));
   color: rgb(var(--fg));
   -webkit-font-smoothing: antialiased;
 }
 
+h1,
+h2,
+h3,
+.font-display {
+  font-family: 'Archivo Black', 'Archivo', sans-serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+/* Numbers are set in a typewriter mono so columns line up and prices read as data. */
+.num {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
 ::selection {
-  background: rgb(var(--accent) / 0.35);
+  background: rgb(var(--accent));
+  color: rgb(var(--accent-fg));
+}
+
+/* One chunky icon style for the whole app, instead of the library default. */
+svg.lucide {
+  stroke-width: 2.6;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+
+/* Keyboard focus is always visible. Inputs draw theirs on their wrapper (see Field). */
+:focus-visible {
+  outline: 2px solid rgb(var(--fg));
+  outline-offset: 2px;
 }
 
 button,
 a,
-input,
 select {
   transition:
-    color 0.18s ease,
-    background-color 0.18s ease,
-    border-color 0.18s ease,
-    opacity 0.18s ease,
-    transform 0.18s ease,
-    box-shadow 0.18s ease;
+    color 0.12s ease,
+    background-color 0.12s ease,
+    border-color 0.12s ease,
+    opacity 0.12s ease;
 }
 
-/* ---- premium surfaces ---- */
-.glass {
-  background: rgb(var(--panel) / 0.62);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-  border: 1px solid rgb(var(--line) / 0.9);
-}
-
-.gradient-text {
-  background: linear-gradient(110deg, rgb(var(--accent)), rgb(var(--accent2)));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.gradient-bg {
-  background: linear-gradient(110deg, rgb(var(--accent)), rgb(var(--accent2)));
-}
-
-.glow {
-  box-shadow:
-    0 0 0 1px rgb(var(--accent) / 0.28),
-    0 24px 70px -24px rgb(var(--accent) / 0.45);
-}
-
-.lift {
+/* A raised button sinks into its shadow when pressed. */
+.press {
   transition:
-    transform 0.25s ease,
-    box-shadow 0.25s ease,
-    border-color 0.25s ease;
+    transform 0.08s ease,
+    box-shadow 0.08s ease,
+    background-color 0.12s ease;
 }
-.lift:hover {
-  transform: translateY(-3px);
-  border-color: rgb(var(--accent) / 0.5);
-  box-shadow: 0 18px 50px -26px rgb(var(--accent) / 0.55);
-}
-
-.grid-lines {
-  background-image:
-    linear-gradient(rgb(var(--line) / 0.35) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(var(--line) / 0.35) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: radial-gradient(ellipse at 50% 30%, black 20%, transparent 72%);
-  -webkit-mask-image: radial-gradient(ellipse at 50% 30%, black 20%, transparent 72%);
+.press:not(:disabled):active {
+  transform: translate(1px, 1px);
+  box-shadow: 0 0 0 0 rgb(var(--fg));
 }
 
-/* ---- ambient motion (turned down by Settings > Motion) ---- */
-@keyframes drift-a {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  50% { transform: translate3d(5%, 8%, 0) scale(1.12); }
-}
-@keyframes drift-b {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1.05); }
-  50% { transform: translate3d(-7%, -5%, 0) scale(0.95); }
-}
-@keyframes float-y {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-@keyframes marquee {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
-}
-@keyframes caret {
-  0%, 49% { opacity: 1; }
-  50%, 100% { opacity: 0; }
-}
-@keyframes ping-soft {
-  0% { transform: scale(1); opacity: 0.55; }
-  80%, 100% { transform: scale(2.4); opacity: 0; }
-}
-.anim-drift-a { animation: drift-a 16s ease-in-out infinite; }
-.anim-drift-b { animation: drift-b 20s ease-in-out infinite; }
-.anim-float { animation: float-y 6s ease-in-out infinite; }
-.anim-marquee { animation: marquee 38s linear infinite; }
-.anim-caret { animation: caret 1s steps(1) infinite; }
-.anim-ping { animation: ping-soft 2.2s ease-out infinite; }
-.marquee-mask {
-  mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
-  -webkit-mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
-/* Reduced: no looping decoration. Off: no animation or transition at all. */
+.thin-scroll::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: rgb(var(--line));
+}
+.thin-scroll::-webkit-scrollbar-track {
+  background: rgb(var(--panel2));
+}
+
+/* Toasts match the rest: square, bordered, hard shadow. */
+[data-sonner-toast] {
+  border: 1px solid rgb(var(--fg)) !important;
+  border-radius: 0 !important;
+  box-shadow: 3px 3px 0 0 rgb(var(--fg)) !important;
+  background: rgb(var(--panel)) !important;
+  color: rgb(var(--fg)) !important;
+  font-family: 'Archivo', sans-serif !important;
+}
+
+/* Settings > Notifications: "errors only" hides success toasts. */
+html[data-toasts='errors'] [data-sonner-toast][data-type='success'] {
+  display: none;
+}
+
+/* Settings > Display: hide balances and amounts marked .sensitive. */
+html[data-privacy='on'] .sensitive {
+  filter: blur(7px);
+  user-select: none;
+}
+
+/* Settings > Look: table density. */
+html[data-density='compact'] td,
+html[data-density='compact'] th {
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+}
+
+/* Settings > Motion. Reduced drops the demo loop and entrances. Off removes every transition. */
 html[data-motion='reduced'] [class*='anim-'] {
   animation: none !important;
 }
@@ -163,40 +163,15 @@ html[data-motion='off'] *::after {
   scroll-behavior: auto !important;
 }
 
-/* ---- notifications: "errors only" hides success toasts ---- */
-html[data-toasts='errors'] [data-sonner-toast][data-type='success'] {
-  display: none;
-}
-
-/* ---- density ---- */
-html[data-density='compact'] td,
-html[data-density='compact'] th {
-  padding-top: 0.3rem;
-  padding-bottom: 0.3rem;
-}
-
-.num {
-  font-variant-numeric: tabular-nums;
-}
-
-input[type='number']::-webkit-inner-spin-button,
-input[type='number']::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.thin-scroll::-webkit-scrollbar {
-  height: 6px;
-  width: 6px;
-}
-.thin-scroll::-webkit-scrollbar-thumb {
-  background: rgb(var(--line));
-  border-radius: 6px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
+/* Phones: 16px inputs stop iOS from zooming on focus. */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
   }
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
 }

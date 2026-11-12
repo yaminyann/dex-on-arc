@@ -22,11 +22,11 @@ export function Dashboard({ network }: { network: NetworkConfig }) {
       <div className="space-y-4">
         <NetworkBanner network={network} />
         <Panel className="mx-auto max-w-xl p-10 text-center">
-          <h1 className="font-display text-xl font-semibold">Your dashboard</h1>
+          <h1 className="text-3xl">Your dashboard</h1>
           <p className="mx-auto mt-2 max-w-sm text-sm text-mute">Connect a wallet to see your balances, escrowed funds, orders, plans and PnL on {network.label}.</p>
           <ConnectKitButton.Custom>
             {({ show }) => (
-              <button onClick={show} className="mt-5 min-h-[40px] rounded-lg bg-accent px-5 text-sm font-semibold text-accent-ink hover:opacity-90">
+              <button onClick={show} className="press mt-5 min-h-[48px] border border-line bg-accent px-6 text-sm font-bold text-accent-ink shadow-hard">
                 Connect wallet
               </button>
             )}
@@ -48,7 +48,7 @@ export function Dashboard({ network }: { network: NetworkConfig }) {
       </div>
 
       <Panel>
-        <div className="border-b border-line px-4 py-3 font-display text-sm font-semibold">Balances</div>
+        <div className="border-b border-line px-4 py-3 text-lg">Balances</div>
         {a.loading ? (
           <div className="space-y-2 p-4">
             <Skeleton className="h-8" />
@@ -82,7 +82,7 @@ export function Dashboard({ network }: { network: NetworkConfig }) {
 
       {a.dcas.length > 0 && (
         <Panel>
-          <div className="border-b border-line px-4 py-3 font-display text-sm font-semibold">DCA performance</div>
+          <div className="border-b border-line px-4 py-3 text-lg">DCA performance</div>
           <Table
             head={['Token', 'Status', 'Buys', 'Spent', 'Bought', 'Avg. entry', 'Oracle price', 'Vs entry']}
             empty={{ title: 'No DCA plans', body: 'Create a recurring buy from the Trade page or the Agent Station.' }}
@@ -115,8 +115,8 @@ export function Dashboard({ network }: { network: NetworkConfig }) {
 function Stat({ label, value, sub, tone, big }: { label: string; value: string | null; sub: string; tone?: string; big?: boolean }) {
   return (
     <Panel className={`p-4 ${big ? 'col-span-2 lg:col-span-1' : ''}`}>
-      <div className="text-[11px] uppercase tracking-wider text-mute">{label}</div>
-      {value === null ? <Skeleton className="mt-2 h-7 w-28" /> : <div className={`num mt-1 font-display text-lg font-semibold sm:text-xl ${tone ?? ''}`}>{value}</div>}
+      <div className="text-xs font-semibold text-mute">{label}</div>
+      {value === null ? <Skeleton className="mt-2 h-7 w-28" /> : <div className={`num sensitive mt-1 text-lg font-semibold sm:text-2xl ${tone ?? ''}`}>{value}</div>}
       <div className="mt-1 text-[11px] text-mute">{sub}</div>
     </Panel>
   )
