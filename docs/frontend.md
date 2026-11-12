@@ -8,11 +8,13 @@ React 18, Vite, TypeScript, Tailwind, wagmi v2 with ConnectKit (injected wallets
 | --- | --- | --- |
 | Trade | `Terminal` | Network banner, token selector and pair stats, trade panel, chart, order tabs, collapsible testnet tools (testnet only) |
 | Dashboard | `Dashboard` | Account value, available and escrowed USDC, realized and unrealized PnL, balances (zero balances of untradable tokens hidden), every order, plan, fill and position, DCA performance |
-| Lending | `Lending` | A design for a future lending market: markets table, supply/borrow ticket, position and health factor. Rates and totals show a dash (no market is connected, so nothing is invented); wallet balances are real |
+| Home | `Landing` | The landing page: animated hero with live facts (token count, keeper status), product illustration, token marquee, features, how it works, an animated Agent demo, security, FAQ and a closing call to action. Every number on it is real or plainly labelled an illustration |
 | Agent | `AgentStation` | Command-driven trading with readback and one-time permission. See [agent-station.md](agent-station.md) |
 | Admin | `Admin` | Owner only. See [admin-guide.md](admin-guide.md) |
 
 The layout follows the familiar exchange-terminal pattern (the Hyperliquid style of dense dark panels, not a copy): a price header, chart and order form on top, then the orders table beside an account box. The brand (name, tagline, social and legal links) lives in `src/brand.ts`; the logo is `Logo.tsx`.
+
+Pages are hash routes (`/#/trade`, `/#/agent`), so any page can be linked and the back button works. Page changes fade; the landing page animates in as it scrolls into view. Motion obeys Settings and the system "reduce motion" request (`html[data-motion]`), and "off" removes every animation and transition.
 
 Navigation, network selector (Testnet / Mainnet), wallet button, USDC balance, theme toggle and settings live in `Header`; `Footer` shows live status (backend, network, keeper), links, socials and the risk notice. Social links appear only when their `VITE_SOCIAL_*` variable is set (GitHub defaults to this repository); Terms and Privacy open a plain-language placeholder until `VITE_TERMS_URL` / `VITE_PRIVACY_URL` point at real documents.
 
@@ -22,11 +24,12 @@ Every setting applies the moment it changes and is remembered in this browser (`
 
 | Tab | Settings |
 | --- | --- |
-| Look | Theme (dark, light, follow system), accent colour (five), interface size (compact, default, large), the testnet note |
+| General | Page the app opens on (Home, Trade, Dashboard), notifications (all, errors only, off) and where they appear, the testnet note |
+| Look | Theme (dark, light, follow system), accent colour (Iris, Sky, Ember, Orchid, Gold), interface size, table density (comfortable, compact), motion (full, reduced, off) |
 | Trading | Max slippage, order expiry, which order type the form opens on |
-| Chart | Default timeframe, volume bars, moving average |
+| Chart | Style (candles or line), default timeframe, volume bars, moving average |
 | Agent | Permission summary, revoke, reset today's usage |
-| Data | Export settings, reset all settings |
+| Data | Export, import (validated, size-limited) and reset |
 
 On small screens the trade panel sits directly under the pair header and above the chart; from the `lg` breakpoint it is a right-hand column. A network with no tokens or contract (mainnet until it is configured) shows a single "Trading is not enabled" card instead of disabled panels. Only tokens with an oracle feed are offered for trading (`tradableBases`): on testnet that is tBTC, tETH and tSOL; EURC, cirBTC and WETH only appear in the portfolio when held.
 

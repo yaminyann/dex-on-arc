@@ -64,7 +64,7 @@ export function Terminal({ network }: { network: NetworkConfig }) {
     <div className="space-y-3">
       <NetworkBanner network={network} />
       {/* One grid so the order form sits right under the price header on small screens, beside the chart on wide ones. */}
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
         <Panel className="p-4 lg:col-start-1 lg:row-start-1">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
             <TokenSelector network={network} bases={bases} value={base} onChange={(t) => setBaseAddr(t.address)} />

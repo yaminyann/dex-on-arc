@@ -14,8 +14,8 @@ const clean = (v: unknown): string | undefined => {
 }
 
 export const BRAND = {
-  name: 'Arcora',
-  tagline: 'Trade, lend and automate on Arc',
+  name: 'Lumarc',
+  tagline: 'Trade, automate and command on Arc',
   description: 'A non-custodial trading terminal for Arc: aggregator swaps, escrowed limit, stop and DCA orders, and a command-driven agent.',
   links: {
     x: clean(env.VITE_SOCIAL_X),

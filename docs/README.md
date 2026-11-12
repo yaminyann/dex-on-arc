@@ -1,4 +1,4 @@
-# Arcora documentation
+# Lumarc documentation
 
 Arc Terminal is a non-custodial trading terminal for Arc. Users swap through a DEX aggregator, place escrowed conditional orders (limit, stop-loss, take-profit, stop-limit, trailing stop, OCO), and run recurring buys (DCA). Funds stay in a smart contract the user can always exit; anyone can execute an order once its condition is met.
 

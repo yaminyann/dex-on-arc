@@ -15,7 +15,7 @@ interface ListedToken {
 /** Reference charts exist only for assets Coinbase lists. Matched on the aggregator's own address for the token. */
 const REFERENCE_BY_SYMBOL: Record<string, string> = { cirBTC: 'BTC-USD', WETH: 'ETH-USD', EURC: 'EURC-USDC' }
 
-async function fetchTokenList(chainId: number): Promise<ListedToken[]> {
+export async function fetchTokenList(chainId: number): Promise<ListedToken[]> {
   const res = await fetch(`/api/tokens?chainId=${chainId}`)
   if (!res.ok) throw new Error('The token list is unavailable right now.')
   const json = (await res.json()) as { tokens?: ListedToken[] }

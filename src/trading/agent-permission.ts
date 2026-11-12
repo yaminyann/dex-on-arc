@@ -96,7 +96,7 @@ function fmt(n: number): string {
   return n.toLocaleString(undefined, { maximumFractionDigits: 2 })
 }
 
-const USAGE_KEY = 'arcora-agent-usage-v1'
+const USAGE_KEY = 'lumarc-agent-usage-v1'
 
 function today(now: number): string {
   return new Date(now).toISOString().slice(0, 10)

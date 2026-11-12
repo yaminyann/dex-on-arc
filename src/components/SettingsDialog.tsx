@@ -1,13 +1,14 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Check } from 'lucide-react'
 import { clsx } from 'clsx'
-import { ACCENTS, SCALES, TIMEFRAME_CHOICES, useSettings, type Accent, type Scale, type ThemePref } from '@/trading/settings'
+import { ACCENTS, SCALES, TIMEFRAME_CHOICES, useSettings, type Accent, type Density, type Motion, type Scale, type StartPage, type ThemePref, type ToastMode, type ToastPosition } from '@/trading/settings'
 import { useNowSeconds } from '@/trading/hooks'
 import { clearUsage, isGrantActive, loadSpentToday } from '@/trading/agent-permission'
 import { Button, Field, Modal, Notice, Segmented, Switch } from './ui'
 
 const PRESETS = [10, 50, 100, 300]
 const TABS = [
+  { id: 'general', label: 'General' },
   { id: 'look', label: 'Look' },
   { id: 'trading', label: 'Trading' },
   { id: 'chart', label: 'Chart' },
@@ -45,11 +46,12 @@ function NumberSetting({ label, value, min, max, step, right, onCommit }: { labe
   )
 }
 
-function Group({ title, children }: { title: string; children: React.ReactNode }) {
+function Group({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
     <div>
       <div className="mb-1.5 text-xs font-medium text-mute">{title}</div>
       {children}
+      {hint && <p className="mt-1.5 text-[11px] text-mute">{hint}</p>}
     </div>
   )
 }
@@ -57,24 +59,81 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 /** Every setting applies the moment you change it and is remembered on this device. */
 export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const s = useSettings()
-  const [tab, setTab] = useState<TabId>('look')
-  const [note, setNote] = useState<string | null>(null)
+  const [tab, setTab] = useState<TabId>('general')
+  const [note, setNote] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
 
   const exportSettings = () => {
     const { page: _page, ...data } = s
-    const blob = new Blob([JSON.stringify({ app: 'arcora', exportedAt: new Date().toISOString(), settings: data }, null, 2)], { type: 'application/json' })
+    const blob = new Blob([JSON.stringify({ app: 'lumarc', exportedAt: new Date().toISOString(), settings: data }, null, 2)], { type: 'application/json' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = 'arcora-settings.json'
+    a.download = 'lumarc-settings.json'
     a.click()
     URL.revokeObjectURL(a.href)
   }
 
+  const importSettings = async (file: File) => {
+    try {
+      if (file.size > 64 * 1024) throw new Error('That file is too large to be a settings export.')
+      const json = JSON.parse(await file.text()) as { app?: string; settings?: unknown }
+      if (json.app !== 'lumarc' || typeof json.settings !== 'object' || json.settings === null) throw new Error('This is not a Lumarc settings file.')
+      s.importSettings(json.settings)
+      setNote({ tone: 'ok', text: 'Settings imported. Unknown or out-of-range values were replaced by defaults.' })
+    } catch (e) {
+      setNote({ tone: 'error', text: e instanceof Error ? e.message : 'Could not read that file.' })
+    }
+  }
+
   return (
     <Modal open={open} onClose={onClose} title="Settings" wide>
-      <div className="mb-4 thin-scroll overflow-x-auto">
-        <Segmented className="w-full min-w-max" value={tab} onChange={setTab} options={TABS.map((t) => ({ id: t.id, label: t.label }))} />
+      <div className="thin-scroll -mx-1 mb-4 overflow-x-auto px-1">
+        <Segmented className="min-w-max" value={tab} onChange={setTab} options={TABS.map((t) => ({ id: t.id, label: t.label }))} />
       </div>
+
+      {tab === 'general' && (
+        <div className="space-y-5">
+          <Group title="Open the app on" hint="A link such as /#/agent always wins over this.">
+            <Segmented
+              className="w-full"
+              value={s.startPage}
+              onChange={(v: StartPage) => s.set('startPage', v)}
+              options={[
+                { id: 'home', label: 'Home' },
+                { id: 'trade', label: 'Trade' },
+                { id: 'dashboard', label: 'Dashboard' },
+              ]}
+            />
+          </Group>
+          <Group title="Notifications" hint="Transaction results appear as small toasts. Errors only keeps failures and hides the rest.">
+            <Segmented
+              className="w-full"
+              value={s.toasts}
+              onChange={(v: ToastMode) => s.set('toasts', v)}
+              options={[
+                { id: 'all', label: 'All' },
+                { id: 'errors', label: 'Errors only' },
+                { id: 'off', label: 'Off' },
+              ]}
+            />
+          </Group>
+          {s.toasts !== 'off' && (
+            <Group title="Notification position">
+              <Segmented
+                className="w-full"
+                value={s.toastPosition}
+                onChange={(v: ToastPosition) => s.set('toastPosition', v)}
+                options={[
+                  { id: 'top-center', label: 'Top' },
+                  { id: 'bottom-center', label: 'Bottom' },
+                  { id: 'bottom-right', label: 'Bottom right' },
+                ]}
+              />
+            </Group>
+          )}
+          <Switch checked={s.showNetworkBanner} onChange={(v) => s.set('showNetworkBanner', v)} label="Show the testnet explanation" hint="The short note about test tokens at the top of the trade page" />
+        </div>
+      )}
 
       {tab === 'look' && (
         <div className="space-y-5">
@@ -91,9 +150,9 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
             />
           </Group>
           <Group title="Accent colour">
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2.5">
               {(Object.keys(ACCENTS) as Accent[]).map((a) => {
-                const rgb = ACCENTS[a][s.theme][0]
+                const [main, fg, second] = ACCENTS[a][s.theme]
                 return (
                   <button
                     key={a}
@@ -102,10 +161,10 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
                     aria-pressed={s.accent === a}
                     aria-label={ACCENTS[a].label}
                     title={ACCENTS[a].label}
-                    className={clsx('grid h-9 w-9 place-items-center rounded-full border-2 transition', s.accent === a ? 'border-ink' : 'border-transparent hover:border-line')}
-                    style={{ background: `rgb(${rgb})` }}
+                    className={clsx('grid h-10 w-10 place-items-center rounded-full border-2 transition hover:scale-110', s.accent === a ? 'border-ink' : 'border-transparent')}
+                    style={{ background: `linear-gradient(135deg, rgb(${main}), rgb(${second}))` }}
                   >
-                    {s.accent === a && <Check className="h-4 w-4" style={{ color: `rgb(${ACCENTS[a][s.theme][1]})` }} />}
+                    {s.accent === a && <Check className="h-4 w-4" style={{ color: `rgb(${fg})` }} />}
                   </button>
                 )
               })}
@@ -114,7 +173,29 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
           <Group title="Interface size">
             <Segmented className="w-full" value={s.scale} onChange={(v: Scale) => s.set('scale', v)} options={(Object.keys(SCALES) as Scale[]).map((k) => ({ id: k, label: SCALES[k].label }))} />
           </Group>
-          <Switch checked={s.showNetworkBanner} onChange={(v) => s.set('showNetworkBanner', v)} label="Show the testnet explanation" hint="The short note about test tokens at the top of the trade page" />
+          <Group title="Table density" hint="Compact fits more orders on screen.">
+            <Segmented
+              className="w-full"
+              value={s.density}
+              onChange={(v: Density) => s.set('density', v)}
+              options={[
+                { id: 'comfortable', label: 'Comfortable' },
+                { id: 'compact', label: 'Compact' },
+              ]}
+            />
+          </Group>
+          <Group title="Motion" hint={s.animate ? 'Full adds page transitions and ambient animation. Reduced keeps only short fades.' : 'Animation is off here, either by this setting or because your system asks for reduced motion.'}>
+            <Segmented
+              className="w-full"
+              value={s.motion}
+              onChange={(v: Motion) => s.set('motion', v)}
+              options={[
+                { id: 'full', label: 'Full' },
+                { id: 'reduced', label: 'Reduced' },
+                { id: 'off', label: 'Off' },
+              ]}
+            />
+          </Group>
         </div>
       )}
 
@@ -158,6 +239,17 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
 
       {tab === 'chart' && (
         <div className="space-y-5">
+          <Group title="Chart style">
+            <Segmented
+              className="w-full"
+              value={s.chartType}
+              onChange={(v) => s.set('chartType', v)}
+              options={[
+                { id: 'candles', label: 'Candles' },
+                { id: 'line', label: 'Line' },
+              ]}
+            />
+          </Group>
           <Group title="Default timeframe">
             <div className="flex flex-wrap gap-1.5">
               {TIMEFRAME_CHOICES.map((t) => (
@@ -185,22 +277,36 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
 
       {tab === 'data' && (
         <div className="space-y-4">
-          <p className="text-xs text-mute">Settings and recent agent messages live in this browser only. Nothing here is sent to a server.</p>
+          <p className="text-xs text-mute">Settings and the agent permission live in this browser only. Nothing here is sent to a server. An exported file contains your settings and agent limits, never keys.</p>
           <div className="flex flex-wrap gap-2">
             <Button variant="ghost" onClick={exportSettings}>
               Export settings
             </Button>
+            <Button variant="ghost" onClick={() => fileInput.current?.click()}>
+              Import settings
+            </Button>
+            <input
+              ref={fileInput}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                if (f) void importSettings(f)
+                e.target.value = ''
+              }}
+            />
             <Button
               variant="danger"
               onClick={() => {
                 s.resetAll()
-                setNote('Settings were reset to the defaults.')
+                setNote({ tone: 'ok', text: 'Settings were reset to the defaults.' })
               }}
             >
               Reset all settings
             </Button>
           </div>
-          {note && <Notice tone="ok">{note}</Notice>}
+          {note && <Notice tone={note.tone}>{note.text}</Notice>}
         </div>
       )}
     </Modal>

@@ -14,6 +14,7 @@ export default {
         ink: token('fg'),
         mute: token('muted'),
         accent: token('accent'),
+        accent2: token('accent2'),
         'accent-ink': token('accent-fg'),
         up: token('up'),
         down: token('down'),

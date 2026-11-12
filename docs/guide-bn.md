@@ -1,4 +1,4 @@
-# Arcora (Arc Terminal): সম্পূর্ণ গাইড (বাংলা)
+# Lumarc (Arc Terminal): সম্পূর্ণ গাইড (বাংলা)
 
 এই গাইডে আছে: কয়েন লিস্ট কীভাবে কাজ করে, প্ল্যাটফর্ম ফি ও অ্যাডমিন কন্ট্রোল, লোকালি চালানো ও টেস্ট করা, Coolify তে Docker Compose দিয়ে ডেপ্লয়, `.env` এর প্রতিটি ভ্যারিয়েবল, এবং mainnet এ যাওয়ার আগের চেকলিস্ট।
 
@@ -8,23 +8,24 @@
 
 ## ০. নতুন: প্ল্যাটফর্মের নাম, পেজ, Agent Station ও Settings
 
-**নাম: Arcora** (Arc + aurora)। লোগো হলো একটি arch (arc) আর তার ওপরে একটি উঠতে থাকা বিন্দু; accent রঙ বদলালে লোগোও বদলায়। নামটি ডোমেইন ও trademark এ খালি আছে কি না আপনি যাচাই করে নিন। নাম, tagline ও সব লিংক `src/brand.ts` এ এক জায়গায়।
+**নাম: Lumarc** (lumen + arc: Arc এর ওপর আলো)। আগের নাম Arcora অন্য কারো ছিল বলে বদলানো হয়েছে। ওয়েব সার্চে "Lumarc" নামে কোনো ক্রিপ্টো প্রকল্প পাওয়া যায়নি, কিন্তু এটা আইনি নিশ্চয়তা নয়: ডোমেইন ও trademark আপনি নিজে যাচাই করে নিন। লোগো একটি arch (arc) আর তার ওপরে একটি উঠতে থাকা বিন্দু, দুই accent রঙের gradient এ। নাম, tagline ও সব লিংক `src/brand.ts` এ এক জায়গায়।
 
-**পেজ:** Trade, Dashboard, Lending, Agent (আর owner হলে Admin)। Layout Hyperliquid এর ঢঙে (ঘন dark panel: উপরে price header, chart ও order form, নিচে orders table আর পাশে Account box), কপি নয়।
+**পেজ (hash route, যেমন `/#/agent`):** Home (landing page), Trade, Dashboard, Agent (আর owner হলে Admin)। **Lending পেজ সরিয়ে দেওয়া হয়েছে।** Layout Hyperliquid এর ঢঙে (ঘন dark panel), কপি নয়। রং এখন indigo বেস আর Iris (বেগুনি-নীল) accent; আরও চারটি accent বেছে নেওয়া যায়: Sky, Ember, Orchid, Gold। আগের teal রঙ আর নেই।
 
 - **Dashboard:** Account value, available, escrow, realized / unrealized PnL, balances, সব order, DCA ও fill।
-- **Lending:** শুধু ডিজাইন (Preview)। কোনো lending market যুক্ত নেই, তাই rate ও total এ `—` দেখায়, বানানো সংখ্যা নেই। Wallet balance আসল। Market যুক্ত হলে এই layout এ বসবে।
+- **Landing page (Home):** animated hero, আসল তথ্য (কতগুলো token routable, keeper চলছে কি না), product illustration (লেখা আছে "Illustration"), token marquee, features, how it works, লাইভ-অ্যানিমেটেড Agent demo, security, FAQ। কোনো বানানো volume বা user সংখ্যা নেই।
 - **Footer:** Online / network / keeper status, Docs, Terms, Privacy, Risk, social আইকন। Social লিংক শুধু তখনই দেখায় যখন `VITE_SOCIAL_X`, `VITE_SOCIAL_DISCORD`, `VITE_SOCIAL_TELEGRAM` সেট করা থাকে (GitHub ডিফল্টে এই repo)। আমি কোনো handle বানাইনি। Terms ও Privacy এখন সাধারণ ভাষার placeholder; আইনজীবীকে দিয়ে লিখিয়ে `VITE_TERMS_URL` ও `VITE_PRIVACY_URL` দিন।
 
 ### Settings (সঙ্গে সঙ্গে কাজ করে, ব্রাউজারে সেভ থাকে)
 
 | ট্যাব | কী বদলানো যায় |
 | --- | --- |
-| Look | Theme (Dark / Light / System), accent রঙ (৫টি), interface size (Compact / Default / Large), testnet নোট |
+| General | App কোন পেজে খুলবে, notification (সব / শুধু error / বন্ধ) ও তার জায়গা, testnet নোট |
+| Look | Theme (Dark / Light / System), accent রঙ (৫টি), interface size, table density, motion (Full / Reduced / Off) |
 | Trading | Max slippage, order expiry, order form কোন টাইপে খুলবে |
-| Chart | Default timeframe, volume, moving average |
+| Chart | Candles বা Line, default timeframe, volume, moving average |
 | Agent | Permission সারাংশ, Revoke, আজকের usage রিসেট |
-| Data | Settings export, সব রিসেট |
+| Data | Settings export, import, সব রিসেট |
 
 ### Agent Station (কমান্ডে সব কাজ)
 

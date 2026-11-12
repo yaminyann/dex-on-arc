@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { parseCommand, type Intent } from '../src/trading/agent/parser'
 import { addSpent, DEFAULT_AGENT, gateCommand, loadSpentToday, sanitizePermission, type AgentPermission } from '../src/trading/agent-permission'
-import { sanitizeSettings } from '../src/trading/settings'
+import { pageFromHash, sanitizeSettings } from '../src/trading/settings'
 
 function ok(text: string): Intent {
   const r = parseCommand(text)
@@ -168,19 +168,37 @@ describe('agent permission', () => {
 
 describe('settings', () => {
   test('old and broken stored values are repaired, not trusted', () => {
-    const s = sanitizeSettings({ theme: 'light', slippageBps: 99999, expiryDays: 'x', accent: 'neon', scale: 'huge', defaultTimeframe: '3h', networkKey: 'mars', agent: { granted: 'yes' } })
+    const s = sanitizeSettings({ theme: 'light', slippageBps: 99999, expiryDays: 'x', accent: 'aurora', scale: 'huge', motion: 'warp', density: 'tiny', startPage: 'admin', toasts: 'loud', defaultTimeframe: '3h', networkKey: 'mars', agent: { granted: 'yes' } })
     expect(s.themePref).toBe('light')
     expect(s.slippageBps).toBe(1000)
     expect(s.expiryDays).toBe(1)
-    expect(s.accent).toBe('aurora')
+    // The teal accent was retired; any unknown accent falls back to the default.
+    expect(s.accent).toBe('iris')
     expect(s.scale).toBe('md')
+    expect(s.motion).toBe('full')
+    expect(s.density).toBe('comfortable')
+    expect(s.startPage).toBe('home')
+    expect(s.toasts).toBe('all')
     expect(s.defaultTimeframe).toBe('1h')
     expect(s.networkKey).toBe('arc-testnet')
     expect(s.agent.granted).toBe(false)
   })
 
   test('valid values survive', () => {
-    const s = sanitizeSettings({ themePref: 'system', accent: 'violet', scale: 'lg', defaultOrderType: 'limit', defaultTimeframe: '4h', chartVolume: false, networkKey: 'arc' })
-    expect(s).toMatchObject({ themePref: 'system', accent: 'violet', scale: 'lg', defaultOrderType: 'limit', defaultTimeframe: '4h', chartVolume: false, networkKey: 'arc' })
+    const s = sanitizeSettings({ themePref: 'system', accent: 'ember', scale: 'lg', motion: 'reduced', density: 'compact', startPage: 'trade', toasts: 'errors', toastPosition: 'bottom-right', chartType: 'line', defaultOrderType: 'limit', defaultTimeframe: '4h', chartVolume: false, networkKey: 'arc' })
+    expect(s).toMatchObject({ themePref: 'system', accent: 'ember', scale: 'lg', motion: 'reduced', density: 'compact', startPage: 'trade', toasts: 'errors', toastPosition: 'bottom-right', chartType: 'line', defaultOrderType: 'limit', defaultTimeframe: '4h', chartVolume: false, networkKey: 'arc' })
+    expect(s.page).toBe('trade')
+  })
+})
+
+describe('page links', () => {
+  test('the hash names a page, and anything else is ignored', () => {
+    expect(pageFromHash('#/agent')).toBe('agent')
+    expect(pageFromHash('#agent')).toBe('agent')
+    expect(pageFromHash('#/trade?x=1')).toBe('trade')
+    expect(pageFromHash('#/home')).toBe('home')
+    expect(pageFromHash('#/lending')).toBeNull()
+    expect(pageFromHash('')).toBeNull()
+    expect(pageFromHash('#/../../etc')).toBeNull()
   })
 })

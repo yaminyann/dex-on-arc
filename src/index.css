@@ -2,16 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
-/* The accent pair (--accent, --accent-fg) is set at runtime from Settings; these are the defaults. */
+/* Accent colours (--accent, --accent-fg, --accent2) are set at runtime from Settings; these are the defaults. */
 :root {
-  --bg: 240 244 247;
+  --bg: 244 245 252;
   --panel: 255 255 255;
-  --panel2: 236 241 245;
-  --line: 218 226 232;
-  --fg: 12 24 32;
-  --muted: 92 108 118;
-  --accent: 13 148 136;
+  --panel2: 238 240 250;
+  --line: 221 224 240;
+  --fg: 18 20 44;
+  --muted: 98 104 138;
+  --accent: 91 71 232;
   --accent-fg: 255 255 255;
+  --accent2: 2 132 199;
   --up: 5 150 105;
   --down: 220 53 69;
   --warn: 180 110 10;
@@ -19,16 +20,17 @@
 }
 
 .dark {
-  --bg: 6 12 17;
-  --panel: 12 22 29;
-  --panel2: 19 31 40;
-  --line: 32 47 57;
-  --fg: 232 241 244;
-  --muted: 125 145 154;
-  --accent: 45 212 191;
-  --accent-fg: 4 20 22;
-  --up: 45 212 160;
-  --down: 244 112 138;
+  --bg: 8 9 20;
+  --panel: 14 16 32;
+  --panel2: 22 25 46;
+  --line: 38 42 70;
+  --fg: 236 238 250;
+  --muted: 138 144 176;
+  --accent: 139 124 255;
+  --accent-fg: 12 8 40;
+  --accent2: 96 205 255;
+  --up: 52 211 153;
+  --down: 251 113 133;
   --warn: 251 191 36;
   color-scheme: dark;
 }
@@ -41,9 +43,136 @@ body {
   margin: 0;
   min-height: 100dvh;
   font-family: 'DM Sans', sans-serif;
-  background: rgb(var(--bg));
+  background:
+    radial-gradient(900px 480px at 85% -8%, rgb(var(--accent) / 0.1), transparent 60%),
+    radial-gradient(700px 420px at 0% 0%, rgb(var(--accent2) / 0.07), transparent 55%),
+    rgb(var(--bg));
+  background-attachment: fixed;
   color: rgb(var(--fg));
   -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgb(var(--accent) / 0.35);
+}
+
+button,
+a,
+input,
+select {
+  transition:
+    color 0.18s ease,
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+/* ---- premium surfaces ---- */
+.glass {
+  background: rgb(var(--panel) / 0.62);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid rgb(var(--line) / 0.9);
+}
+
+.gradient-text {
+  background: linear-gradient(110deg, rgb(var(--accent)), rgb(var(--accent2)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.gradient-bg {
+  background: linear-gradient(110deg, rgb(var(--accent)), rgb(var(--accent2)));
+}
+
+.glow {
+  box-shadow:
+    0 0 0 1px rgb(var(--accent) / 0.28),
+    0 24px 70px -24px rgb(var(--accent) / 0.45);
+}
+
+.lift {
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+.lift:hover {
+  transform: translateY(-3px);
+  border-color: rgb(var(--accent) / 0.5);
+  box-shadow: 0 18px 50px -26px rgb(var(--accent) / 0.55);
+}
+
+.grid-lines {
+  background-image:
+    linear-gradient(rgb(var(--line) / 0.35) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--line) / 0.35) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse at 50% 30%, black 20%, transparent 72%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 30%, black 20%, transparent 72%);
+}
+
+/* ---- ambient motion (turned down by Settings > Motion) ---- */
+@keyframes drift-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(5%, 8%, 0) scale(1.12); }
+}
+@keyframes drift-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1.05); }
+  50% { transform: translate3d(-7%, -5%, 0) scale(0.95); }
+}
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes caret {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+@keyframes ping-soft {
+  0% { transform: scale(1); opacity: 0.55; }
+  80%, 100% { transform: scale(2.4); opacity: 0; }
+}
+.anim-drift-a { animation: drift-a 16s ease-in-out infinite; }
+.anim-drift-b { animation: drift-b 20s ease-in-out infinite; }
+.anim-float { animation: float-y 6s ease-in-out infinite; }
+.anim-marquee { animation: marquee 38s linear infinite; }
+.anim-caret { animation: caret 1s steps(1) infinite; }
+.anim-ping { animation: ping-soft 2.2s ease-out infinite; }
+.marquee-mask {
+  mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
+}
+
+/* Reduced: no looping decoration. Off: no animation or transition at all. */
+html[data-motion='reduced'] [class*='anim-'] {
+  animation: none !important;
+}
+html[data-motion='off'] *,
+html[data-motion='off'] *::before,
+html[data-motion='off'] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+
+/* ---- notifications: "errors only" hides success toasts ---- */
+html[data-toasts='errors'] [data-sonner-toast][data-type='success'] {
+  display: none;
+}
+
+/* ---- density ---- */
+html[data-density='compact'] td,
+html[data-density='compact'] th {
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
 }
 
 .num {

@@ -317,9 +317,9 @@ export function AgentStation({ network }: { network: NetworkConfig }) {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-      <Panel className="flex min-h-[520px] flex-col lg:h-[calc(100dvh-190px)]">
-        <div className="flex items-center gap-2 border-b border-line px-4 py-3">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <Panel className="flex min-h-[520px] min-w-0 flex-col lg:h-[calc(100dvh-190px)]">
+        <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
           <span className="grid h-8 w-8 place-items-center rounded-lg bg-accent/15 text-accent">
             <Sparkles className="h-4 w-4" />
           </span>
@@ -327,7 +327,9 @@ export function AgentStation({ network }: { network: NetworkConfig }) {
             <h1 className="font-display text-sm font-semibold">Agent Station</h1>
             <p className="text-[11px] text-mute">Type a command. {BRAND.name} reads it back, you confirm, then it runs.</p>
           </div>
-          <Badge tone={active ? 'up' : 'warn'}>{active ? 'Permission on' : 'Permission off'}</Badge>
+          <span className="ml-auto shrink-0">
+            <Badge tone={active ? 'up' : 'warn'}>{active ? 'Permission on' : 'Permission off'}</Badge>
+          </span>
         </div>
 
         <div ref={scroller} className="thin-scroll flex-1 space-y-3 overflow-y-auto px-4 py-4">
@@ -538,7 +540,7 @@ function PermissionPanel({ spent, onReset }: { spent: number; onReset: () => voi
 }
 
 function clearUsageAndNotify() {
-  localStorage.removeItem('arcora-agent-usage-v1')
+  localStorage.removeItem('lumarc-agent-usage-v1')
 }
 
 function PermLine({ k, v }: { k: string; v: string }) {

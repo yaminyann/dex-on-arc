@@ -31,12 +31,13 @@ interface Props {
 }
 
 export function PriceChart({ candles, loading, error, timeframe, onTimeframe, source, live }: Props) {
-  const { theme, accent, chartVolume: showVol, chartMa: showSma, set } = useSettings()
+  const { theme, accent, chartVolume: showVol, chartMa: showSma, chartType, set } = useSettings()
   const host = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const candleRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
   const volRef = useRef<ISeriesApi<'Histogram'> | null>(null)
   const smaRef = useRef<ISeriesApi<'Line'> | null>(null)
+  const closeRef = useRef<ISeriesApi<'Line'> | null>(null)
   const fitted = useRef('')
 
   useEffect(() => {
@@ -59,7 +60,8 @@ export function PriceChart({ candles, loading, error, timeframe, onTimeframe, so
     })
     volRef.current = chart.addSeries(HistogramSeries, { priceFormat: { type: 'volume' }, priceScaleId: 'vol' })
     chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } })
-    smaRef.current = chart.addSeries(LineSeries, { color: cssRgb('accent'), lineWidth: 1, priceLineVisible: false, lastValueVisible: false })
+    closeRef.current = chart.addSeries(LineSeries, { color: cssRgb('accent'), lineWidth: 2, priceLineVisible: true, lastValueVisible: true, visible: false })
+    smaRef.current = chart.addSeries(LineSeries, { color: cssRgb('warn'), lineWidth: 1, priceLineVisible: false, lastValueVisible: false })
     return () => {
       chart.remove()
       chartRef.current = null
@@ -74,7 +76,8 @@ export function PriceChart({ candles, loading, error, timeframe, onTimeframe, so
       timeScale: { borderColor: cssRgb('line') },
     })
     candleRef.current?.applyOptions({ upColor: cssRgb('up'), downColor: cssRgb('down'), wickUpColor: cssRgb('up'), wickDownColor: cssRgb('down') })
-    smaRef.current?.applyOptions({ color: cssRgb('accent') })
+    smaRef.current?.applyOptions({ color: cssRgb('warn') })
+    closeRef.current?.applyOptions({ color: cssRgb('accent') })
   }, [theme, accent])
 
   const sma20 = useMemo(() => sma(candles, 20), [candles])
@@ -82,6 +85,9 @@ export function PriceChart({ candles, loading, error, timeframe, onTimeframe, so
   useEffect(() => {
     const t = (n: number) => n as UTCTimestamp
     candleRef.current?.setData(candles.map((c) => ({ time: t(c.time), open: c.open, high: c.high, low: c.low, close: c.close })))
+    closeRef.current?.setData(candles.map((c) => ({ time: t(c.time), value: c.close })))
+    candleRef.current?.applyOptions({ visible: chartType === 'candles' })
+    closeRef.current?.applyOptions({ visible: chartType === 'line' })
     volRef.current?.setData(
       showVol ? candles.map((c) => ({ time: t(c.time), value: c.volume, color: c.close >= c.open ? cssRgb('up', 0.35) : cssRgb('down', 0.35) })) : [],
     )
@@ -91,7 +97,7 @@ export function PriceChart({ candles, loading, error, timeframe, onTimeframe, so
       chartRef.current?.timeScale().fitContent()
       fitted.current = key
     }
-  }, [candles, showVol, showSma, sma20, timeframe])
+  }, [candles, showVol, showSma, sma20, timeframe, chartType])
 
   const toggles: [string, boolean, (v: boolean) => void][] = [
     ['Vol', showVol, (v) => set('chartVolume', v)],

@@ -1,6 +1,6 @@
-# Arcora
+# Lumarc
 
-Arcora: trade, lend and automate on Arc. A non-custodial trading terminal: market swaps through a DEX aggregator, escrowed conditional orders (limit, stop-loss, take-profit, stop-limit, trailing stop, OCO), recurring buys (DCA), a wallet portfolio, a dashboard, a command-driven Agent Station, a lending page design, and an owner admin page.
+Lumarc: trade, automate and command on Arc. A non-custodial trading terminal: market swaps through a DEX aggregator, escrowed conditional orders (limit, stop-loss, take-profit, stop-limit, trailing stop, OCO), recurring buys (DCA), a wallet portfolio, a dashboard, a command-driven Agent Station, a lending page design, and an owner admin page.
 
 Built with [Arc Studio](https://studio.arc.io)
 
