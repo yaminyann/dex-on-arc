@@ -2,14 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* The accent pair (--accent, --accent-fg) is set at runtime from Settings; these are the defaults. */
 :root {
-  --bg: 244 245 247;
+  --bg: 240 244 247;
   --panel: 255 255 255;
-  --panel2: 241 243 246;
-  --line: 224 228 234;
-  --fg: 14 22 40;
-  --muted: 100 110 128;
-  --accent: 27 49 88;
+  --panel2: 236 241 245;
+  --line: 218 226 232;
+  --fg: 12 24 32;
+  --muted: 92 108 118;
+  --accent: 13 148 136;
   --accent-fg: 255 255 255;
   --up: 5 150 105;
   --down: 220 53 69;
@@ -18,16 +19,16 @@
 }
 
 .dark {
-  --bg: 7 11 20;
-  --panel: 12 18 32;
-  --panel2: 18 26 44;
-  --line: 32 43 66;
-  --fg: 230 236 246;
-  --muted: 128 142 168;
-  --accent: 172 198 233;
-  --accent-fg: 12 22 42;
-  --up: 52 211 153;
-  --down: 248 113 113;
+  --bg: 6 12 17;
+  --panel: 12 22 29;
+  --panel2: 19 31 40;
+  --line: 32 47 57;
+  --fg: 232 241 244;
+  --muted: 125 145 154;
+  --accent: 45 212 191;
+  --accent-fg: 4 20 22;
+  --up: 45 212 160;
+  --down: 244 112 138;
   --warn: 251 191 36;
   color-scheme: dark;
 }

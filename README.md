@@ -1,6 +1,6 @@
-# Arc Terminal
+# Arcora
 
-A non-custodial trading terminal for Arc: market swaps through a DEX aggregator, escrowed conditional orders (limit, stop-loss, take-profit, stop-limit, trailing stop, OCO), recurring buys (DCA), a wallet portfolio, a wallet portfolio, and an owner admin page.
+Arcora: trade, lend and automate on Arc. A non-custodial trading terminal: market swaps through a DEX aggregator, escrowed conditional orders (limit, stop-loss, take-profit, stop-limit, trailing stop, OCO), recurring buys (DCA), a wallet portfolio, a dashboard, a command-driven Agent Station, a lending page design, and an owner admin page.
 
 Built with [Arc Studio](https://studio.arc.io)
 

@@ -1,21 +1,23 @@
 import { useState } from 'react'
 import { ConnectKitButton } from 'connectkit'
 import { useAccount, useSwitchChain } from 'wagmi'
-import { CandlestickChart, Moon, Settings as SettingsIcon, Sun } from 'lucide-react'
+import { Moon, Settings as SettingsIcon, Sparkles, Sun } from 'lucide-react'
 import { clsx } from 'clsx'
 import { NETWORK_LIST, type NetworkConfig } from '@/trading/networks'
 import { useSettings, type Page } from '@/trading/settings'
 import { useBalances } from '@/trading/hooks'
 import { useContractState } from '@/trading/admin'
 import { formatToken } from '@/trading/math'
+import { Logo } from './Logo'
 import { Skeleton } from './ui'
 import { SettingsDialog } from './SettingsDialog'
 
 const PAGES: { id: Page; label: string }[] = [
   { id: 'trade', label: 'Trade' },
-  { id: 'portfolio', label: 'Portfolio' },
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'lending', label: 'Lending' },
+  { id: 'agent', label: 'Agent' },
 ]
-const ADMIN_PAGE = { id: 'admin' as Page, label: 'Admin' }
 
 export function Header({ network }: { network: NetworkConfig }) {
   const s = useSettings()
@@ -29,29 +31,32 @@ export function Header({ network }: { network: NetworkConfig }) {
   const contract = useContractState(network).data
   const me = address?.toLowerCase()
   const isAdmin = Boolean(me && contract && (me === contract.owner.toLowerCase() || me === contract.pendingOwner?.toLowerCase()))
-  const pages = isAdmin ? [...PAGES, ADMIN_PAGE] : PAGES
+  const pages = isAdmin ? [...PAGES, { id: 'admin' as Page, label: 'Admin' }] : PAGES
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-canvas/85 backdrop-blur">
-      <div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2 sm:gap-x-4 sm:px-5 sm:py-2.5">
-        <div className="flex items-center gap-2">
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-accent text-accent-ink">
-            <CandlestickChart className="h-4 w-4" />
+    <header className="sticky top-0 z-40 border-b border-line bg-canvas/90 backdrop-blur">
+      <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2 sm:gap-x-5 sm:px-5">
+        <button onClick={() => s.setPage('trade')} aria-label="Go to Trade" className="shrink-0">
+          <span className="hidden sm:block">
+            <Logo />
           </span>
-          <span className="hidden font-display text-[15px] font-semibold tracking-tight sm:inline">Arc Terminal</span>
-        </div>
+          <span className="sm:hidden">
+            <Logo showName={false} />
+          </span>
+        </button>
 
-        <nav className="order-last flex w-full gap-1 sm:order-none sm:w-auto" aria-label="Pages">
+        <nav className="order-last flex w-full gap-0.5 overflow-x-auto thin-scroll sm:order-none sm:w-auto" aria-label="Pages">
           {pages.map((p) => (
             <button
               key={p.id}
               onClick={() => s.setPage(p.id)}
               aria-current={s.page === p.id ? 'page' : undefined}
               className={clsx(
-                'flex min-h-[36px] items-center whitespace-nowrap rounded-md px-3 text-sm transition',
-                s.page === p.id ? 'bg-raised text-ink' : 'text-mute hover:text-ink',
+                'flex min-h-[36px] items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-sm font-medium transition',
+                s.page === p.id ? 'text-accent' : 'text-mute hover:text-ink',
               )}
             >
+              {p.id === 'agent' && <Sparkles className="h-3.5 w-3.5" />}
               {p.label}
             </button>
           ))}
@@ -92,10 +97,7 @@ export function Header({ network }: { network: NetworkConfig }) {
 
           <ConnectKitButton.Custom>
             {({ isConnected: connected, show, truncatedAddress }) => (
-              <button
-                onClick={show}
-                className="min-h-[36px] whitespace-nowrap rounded-lg bg-accent px-3 text-xs font-medium text-accent-ink hover:opacity-90"
-              >
+              <button onClick={show} className="min-h-[36px] whitespace-nowrap rounded-lg bg-accent px-3.5 text-xs font-semibold text-accent-ink hover:opacity-90">
                 {connected ? truncatedAddress : 'Connect'}
               </button>
             )}
@@ -103,7 +105,7 @@ export function Header({ network }: { network: NetworkConfig }) {
 
           <button
             aria-label="Toggle theme"
-            onClick={() => s.setTheme(s.theme === 'dark' ? 'light' : 'dark')}
+            onClick={s.toggleTheme}
             className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-mute hover:text-ink"
           >
             {s.theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}

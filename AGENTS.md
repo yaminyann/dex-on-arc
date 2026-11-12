@@ -1,4 +1,4 @@
-# Arc Terminal
+# Arcora (repository: Arc Terminal)
 
 > Built with Arc Studio - money-powered apps in minutes
 
@@ -39,6 +39,9 @@ Non-custodial trading terminal on Arc: market swaps through a quote gateway (0x,
 - Owner config changes (feeds, swap targets) are timelocked; disabling is instant; keeper fee can only be lowered.
 - Mainnet `bases` in `src/trading/networks.ts` stay empty on purpose: the picker loads ~60 aggregator-routable tokens from `/api/tokens` (KyberSwap registry, filtered). Market swaps work for all; orders need an oracle feed on the contract.
 - Platform fee: market swaps only, via the aggregator's own fee params (`PLATFORM_FEE_BPS` max 100, `PLATFORM_FEE_RECIPIENT`); invalid settings turn it off. Order revenue is the keeper fee (lower-only). No contract change.
+- Brand lives in `src/brand.ts` (name Arcora, tagline, links from `VITE_SOCIAL_*`/`VITE_*_URL`; never invent social handles). Pages: Trade, Dashboard (was Portfolio), Lending (design only: dashes, no invented rates), Agent, Admin.
+- Agent Station (`src/trading/agent/`, `src/components/AgentStation.tsx`) is a deterministic command parser, not an LLM: it builds a plan from live data, reads it back, waits for yes, then runs the form calls. One-time permission with limits and scopes in `agent-permission.ts`; the wallet still signs every tx. See `docs/agent-station.md`.
+- Settings (`src/trading/settings.tsx`) are sanitised on load and applied live (theme, accent, size, slippage, expiry, defaults, agent grant). Key `arcora-settings-v2`.
 - Admin page (`src/components/Admin.tsx`) is shown to the contract owner only; owner log comes from `/admin-events` (needs the indexer).
 - Deploy: `Dockerfile` (targets web, api), `docker-compose.yml`, `deploy/nginx.conf`, `scripts/coolify/{gen-env,preflight}.ts`. One api container only (keeper + indexer hold state).
 

@@ -1,4 +1,4 @@
-# Arc Terminal documentation
+# Arcora documentation
 
 Arc Terminal is a non-custodial trading terminal for Arc. Users swap through a DEX aggregator, place escrowed conditional orders (limit, stop-loss, take-profit, stop-limit, trailing stop, OCO), and run recurring buys (DCA). Funds stay in a smart contract the user can always exit; anyone can execute an order once its condition is met.
 
@@ -40,6 +40,7 @@ Documentation last verified against the code on 2026-11-11. Facts about third-pa
 | [testing.md](testing.md) | Contract and application test suites and how to run them |
 | [testnet-harness.md](testnet-harness.md) | Test assets, test price feeds and test router for trying every order type on Arc Testnet, plus the live end-to-end test |
 | [deployment-coolify.md](deployment-coolify.md) | Docker Compose deployment on Coolify, env generator and preflight |
+| [agent-station.md](agent-station.md) | The command-driven agent: commands, confirmation flow, one-time permission, limits |
 | [admin-guide.md](admin-guide.md) | Fees, owner controls and the Admin page |
 | [guide-bn.md](guide-bn.md) | Full guide in Bengali |
 | [operations.md](operations.md) | Runbook: start, monitor, troubleshoot, rotate keys |

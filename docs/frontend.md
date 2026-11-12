@@ -7,9 +7,26 @@ React 18, Vite, TypeScript, Tailwind, wagmi v2 with ConnectKit (injected wallets
 | Page | Component | Contents |
 | --- | --- | --- |
 | Trade | `Terminal` | Network banner, token selector and pair stats, trade panel, chart, order tabs, collapsible testnet tools (testnet only) |
-| Portfolio | `Portfolio` | Total value, realized and unrealized PnL, balances with locked funds (zero balances of untradable tokens hidden), DCA performance when a plan exists |
+| Dashboard | `Dashboard` | Account value, available and escrowed USDC, realized and unrealized PnL, balances (zero balances of untradable tokens hidden), every order, plan, fill and position, DCA performance |
+| Lending | `Lending` | A design for a future lending market: markets table, supply/borrow ticket, position and health factor. Rates and totals show a dash (no market is connected, so nothing is invented); wallet balances are real |
+| Agent | `AgentStation` | Command-driven trading with readback and one-time permission. See [agent-station.md](agent-station.md) |
+| Admin | `Admin` | Owner only. See [admin-guide.md](admin-guide.md) |
 
-Navigation, network selector (Testnet / Mainnet), wallet button, USDC balance, theme toggle and settings (max slippage, order expiry) live in `Header`.
+The layout follows the familiar exchange-terminal pattern (the Hyperliquid style of dense dark panels, not a copy): a price header, chart and order form on top, then the orders table beside an account box. The brand (name, tagline, social and legal links) lives in `src/brand.ts`; the logo is `Logo.tsx`.
+
+Navigation, network selector (Testnet / Mainnet), wallet button, USDC balance, theme toggle and settings live in `Header`; `Footer` shows live status (backend, network, keeper), links, socials and the risk notice. Social links appear only when their `VITE_SOCIAL_*` variable is set (GitHub defaults to this repository); Terms and Privacy open a plain-language placeholder until `VITE_TERMS_URL` / `VITE_PRIVACY_URL` point at real documents.
+
+### Settings
+
+Every setting applies the moment it changes and is remembered in this browser (`src/trading/settings.tsx`, sanitised on load, so old or hand-edited values cannot break the app):
+
+| Tab | Settings |
+| --- | --- |
+| Look | Theme (dark, light, follow system), accent colour (five), interface size (compact, default, large), the testnet note |
+| Trading | Max slippage, order expiry, which order type the form opens on |
+| Chart | Default timeframe, volume bars, moving average |
+| Agent | Permission summary, revoke, reset today's usage |
+| Data | Export settings, reset all settings |
 
 On small screens the trade panel sits directly under the pair header and above the chart; from the `lg` breakpoint it is a right-hand column. A network with no tokens or contract (mainnet until it is configured) shows a single "Trading is not enabled" card instead of disabled panels. Only tokens with an oracle feed are offered for trading (`tradableBases`): on testnet that is tBTC, tETH and tSOL; EURC, cirBTC and WETH only appear in the portfolio when held.
 
@@ -17,7 +34,7 @@ Token picker: on mainnet it lists every token the aggregator can route (about 60
 
 **Admin** (`Admin`): a tab visible only to the contract owner. Contract controls (pause, minimum order, ownership transfer), fees, tokens/routers/timelocked changes and backend status. See [admin-guide.md](admin-guide.md).
 
-Removed on purpose: the Prompt Station placeholder, the swap depth panel, the automation provider list and the EMA 50 chart toggle. The keeper status is one line under non-market order forms.
+Removed on purpose: the swap depth panel, the automation provider list and the EMA 50 chart toggle. The old Prompt Station placeholder is replaced by the working Agent Station. The keeper status is one line under non-market order forms.
 
 ## Trade panel
 

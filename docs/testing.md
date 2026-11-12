@@ -41,7 +41,11 @@ What these tests do not cover: behaviour against real Chainlink feeds, the real 
 - 0x adapter: "no liquidity" never becomes a quote, firm quote parsing, server-side request validation (unsupported chains, bad amounts and addresses, slippage cap).
 - Scaling helpers: cache coalescing, expiry and eviction, failures not cached, rate limiter windows, shard coverage (each id in exactly one shard), backoff growth and cap, chunking, bounded concurrency.
 
+`tests/agent.test.ts` covers the Agent Station and settings: the command parser (every command in several spellings, `$10`, `95,000`, percentages, `all`/`half`, refusal with an example for anything unclear, one token per command), the permission gate (no grant, expiry, scopes, per-command and daily limits, auto-run only with a priced size), clamping of hand-edited permission storage, daily usage reset, and settings sanitising (legacy v1 theme, out-of-range slippage, unknown accents and sizes).
+
 ## Browser walkthrough (done for every release)
+
+The Agent Station is also walked through live on Arc Testnet: help and balance, the one-time grant, a market buy, a stop-loss, a DCA plan, pause, resume and cancel of the plan, cancelling the order, refusals (unknown token, balance, stop above the price, daily limit), and "run inside limits" mode executing right after the readback.
 
 With a funded testnet wallet (a local signing bridge on loopback, testnet key only) every feature is clicked through in the browser: market swap, stop-loss created and filled by the keeper, DCA create/pause/resume/cancel with refund, OCO create/cancel, portfolio, settings, light and dark themes, mobile width, the mainnet token picker with a live KyberSwap quote and the platform fee row (quote only, no mainnet trade), and the Admin page with the owner wallet (pause/resume, queue/cancel a router change). Docker Compose is built and started locally on a spare port and `/healthz` and `/api/health` are checked before a deployment guide is published.
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import {
   CandlestickSeries,
   ColorType,
@@ -31,14 +31,12 @@ interface Props {
 }
 
 export function PriceChart({ candles, loading, error, timeframe, onTimeframe, source, live }: Props) {
-  const { theme } = useSettings()
+  const { theme, accent, chartVolume: showVol, chartMa: showSma, set } = useSettings()
   const host = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const candleRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
   const volRef = useRef<ISeriesApi<'Histogram'> | null>(null)
   const smaRef = useRef<ISeriesApi<'Line'> | null>(null)
-  const [showVol, setShowVol] = useState(true)
-  const [showSma, setShowSma] = useState(true)
   const fitted = useRef('')
 
   useEffect(() => {
@@ -77,7 +75,7 @@ export function PriceChart({ candles, loading, error, timeframe, onTimeframe, so
     })
     candleRef.current?.applyOptions({ upColor: cssRgb('up'), downColor: cssRgb('down'), wickUpColor: cssRgb('up'), wickDownColor: cssRgb('down') })
     smaRef.current?.applyOptions({ color: cssRgb('accent') })
-  }, [theme])
+  }, [theme, accent])
 
   const sma20 = useMemo(() => sma(candles, 20), [candles])
 
@@ -96,8 +94,8 @@ export function PriceChart({ candles, loading, error, timeframe, onTimeframe, so
   }, [candles, showVol, showSma, sma20, timeframe])
 
   const toggles: [string, boolean, (v: boolean) => void][] = [
-    ['Vol', showVol, setShowVol],
-    ['MA 20', showSma, setShowSma],
+    ['Vol', showVol, (v) => set('chartVolume', v)],
+    ['MA 20', showSma, (v) => set('chartMa', v)],
   ]
 
   return (
@@ -130,7 +128,7 @@ export function PriceChart({ candles, loading, error, timeframe, onTimeframe, so
         </div>
       </div>
 
-      <div className="relative h-[280px] sm:h-[380px]">
+      <div className="relative h-[300px] sm:h-[400px] lg:h-[440px]">
         <div ref={host} className="absolute inset-0" />
         {loading && candles.length === 0 && <Skeleton className="absolute inset-3" />}
         {error && (

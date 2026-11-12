@@ -1,8 +1,45 @@
-# Arc Terminal: সম্পূর্ণ গাইড (বাংলা)
+# Arcora (Arc Terminal): সম্পূর্ণ গাইড (বাংলা)
 
 এই গাইডে আছে: কয়েন লিস্ট কীভাবে কাজ করে, প্ল্যাটফর্ম ফি ও অ্যাডমিন কন্ট্রোল, লোকালি চালানো ও টেস্ট করা, Coolify তে Docker Compose দিয়ে ডেপ্লয়, `.env` এর প্রতিটি ভ্যারিয়েবল, এবং mainnet এ যাওয়ার আগের চেকলিস্ট।
 
 > **মনে রাখবেন:** mainnet এ কিছু ডেপ্লয় করা হয়নি। Mainnet এ অর্ডার কন্ট্রাক্ট আপনি নিজে অডিটের পর ডেপ্লয় করবেন। কন্ট্রাক্ট এখনো **unaudited**।
+
+---
+
+## ০. নতুন: প্ল্যাটফর্মের নাম, পেজ, Agent Station ও Settings
+
+**নাম: Arcora** (Arc + aurora)। লোগো হলো একটি arch (arc) আর তার ওপরে একটি উঠতে থাকা বিন্দু; accent রঙ বদলালে লোগোও বদলায়। নামটি ডোমেইন ও trademark এ খালি আছে কি না আপনি যাচাই করে নিন। নাম, tagline ও সব লিংক `src/brand.ts` এ এক জায়গায়।
+
+**পেজ:** Trade, Dashboard, Lending, Agent (আর owner হলে Admin)। Layout Hyperliquid এর ঢঙে (ঘন dark panel: উপরে price header, chart ও order form, নিচে orders table আর পাশে Account box), কপি নয়।
+
+- **Dashboard:** Account value, available, escrow, realized / unrealized PnL, balances, সব order, DCA ও fill।
+- **Lending:** শুধু ডিজাইন (Preview)। কোনো lending market যুক্ত নেই, তাই rate ও total এ `—` দেখায়, বানানো সংখ্যা নেই। Wallet balance আসল। Market যুক্ত হলে এই layout এ বসবে।
+- **Footer:** Online / network / keeper status, Docs, Terms, Privacy, Risk, social আইকন। Social লিংক শুধু তখনই দেখায় যখন `VITE_SOCIAL_X`, `VITE_SOCIAL_DISCORD`, `VITE_SOCIAL_TELEGRAM` সেট করা থাকে (GitHub ডিফল্টে এই repo)। আমি কোনো handle বানাইনি। Terms ও Privacy এখন সাধারণ ভাষার placeholder; আইনজীবীকে দিয়ে লিখিয়ে `VITE_TERMS_URL` ও `VITE_PRIVACY_URL` দিন।
+
+### Settings (সঙ্গে সঙ্গে কাজ করে, ব্রাউজারে সেভ থাকে)
+
+| ট্যাব | কী বদলানো যায় |
+| --- | --- |
+| Look | Theme (Dark / Light / System), accent রঙ (৫টি), interface size (Compact / Default / Large), testnet নোট |
+| Trading | Max slippage, order expiry, order form কোন টাইপে খুলবে |
+| Chart | Default timeframe, volume, moving average |
+| Agent | Permission সারাংশ, Revoke, আজকের usage রিসেট |
+| Data | Settings export, সব রিসেট |
+
+### Agent Station (কমান্ডে সব কাজ)
+
+এটা chat model নয়; একটি নির্দিষ্ট ব্যাকরণের **command interpreter**। একই লেখা সবসময় একই ফল দেয়; না বুঝলে উদাহরণ দিয়ে ফিরিয়ে দেয়, আন্দাজ করে না।
+
+1. কমান্ড লিখুন: `buy 10 USDC of tBTC`, `sell 50% of tBTC`, `stop loss 0.001 tBTC at 80000`, `take profit ...`, `limit buy tBTC 5 USDC at 70000`, `trailing stop 0.001 tBTC 5%`, `oco 0.001 tBTC sl 80000 tp 100000`, `dca 1 USDC into tBTC daily for 7 days`, `cancel order 12`, `pause dca 3`। দেখার জন্য: `help`, `balance`, `orders`, `price tBTC`।
+2. Agent আসল balance, oracle, quote ও contract এর minimum দিয়ে **plan বানায়** ও দেখায়: কত দিচ্ছেন, কত পাবেন (ন্যূনতম), slippage, expiry, fee, সতর্কতা। তারপর জিজ্ঞেস করে: **"Is this exactly what you want?"**
+3. আপনি `yes` লিখলে (বা বোতামে চাপলে) তবেই চলে। `no` বা Cancel করলে কিছু যায় না।
+4. এক মিনিটের পুরনো plan আবার নতুন করে বানিয়ে আবার জিজ্ঞেস করে। Market swap পাঠানোর সময় দাম 0.5% এর বেশি খারাপ হলে পাঠায় না।
+
+**একবার permission:** প্রথম action এর সময় একবার অনুমতি দেন (কতক্ষণ: ১ ঘণ্টা / ২৪ ঘণ্টা / ৭ দিন / revoke পর্যন্ত; প্রতি কমান্ডে ও প্রতিদিনে সর্বোচ্চ USDC; কোন ধরনের কাজ: swap, orders, DCA, cancel/pause)। তারপর সীমার ভেতরে বারবার permission চায় না। চাইলে "Run inside limits" মোডে সীমার ভেতরের কমান্ড readback এর পরই চলে; সীমার বাইরে বা দাম বের করা না গেলে তখনও আপনার yes লাগে। ডান পাশের প্যানেলে যা দেওয়া আছে, কতটা ব্যবহার হয়েছে, আর Revoke বোতাম আছে।
+
+> **সীমা:** Permission আপনার key ধরে না। **Wallet প্রতিটি transaction (approve সহ) এ নিজের confirm চাইবেই**, Agent এটা এড়াতে পারে না। কম popup চাইলে session-key wallet লাগবে, সেটা এখানে বানানো নেই।
+
+বিস্তারিত: `docs/agent-station.md`।
 
 ---
 

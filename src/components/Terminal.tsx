@@ -11,11 +11,12 @@ import { TradePanel } from './TradePanel'
 import { OrderTabs } from './OrderTabs'
 import { NetworkBanner } from './NetworkBanner'
 import { TestnetTools } from './TestnetTools'
+import { AccountPanel } from './AccountPanel'
 
 export function Terminal({ network }: { network: NetworkConfig }) {
-  const { setNetworkKey } = useSettings()
+  const { setNetworkKey, defaultTimeframe } = useSettings()
   const [baseAddr, setBaseAddr] = useState<string | undefined>()
-  const [tf, setTf] = useState<Timeframe>('1h')
+  const [tf, setTf] = useState<Timeframe>(defaultTimeframe)
   const list = useTokenList(network)
   const bases = list.tokens
   // Derived: an address picked on another network falls back to this network's first token.
@@ -71,10 +72,9 @@ export function Terminal({ network }: { network: NetworkConfig }) {
           </div>
         </Panel>
 
-        <aside className="min-w-0 space-y-4 lg:col-start-2 lg:row-span-3 lg:row-start-1">
+        <div className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1">
           <TradePanel network={network} base={base} oracle={oracle.data} />
-          <TestnetTools network={network} base={base} />
-        </aside>
+        </div>
 
         {hasReference ? (
           <Panel className="min-w-0 lg:col-start-1 lg:row-start-2">
@@ -99,6 +99,11 @@ export function Terminal({ network }: { network: NetworkConfig }) {
             <OrderTabs network={network} />
           </div>
         )}
+
+        <aside className="min-w-0 space-y-4 lg:col-start-2 lg:row-start-3">
+          <AccountPanel network={network} />
+          <TestnetTools network={network} base={base} />
+        </aside>
       </div>
     </div>
   )

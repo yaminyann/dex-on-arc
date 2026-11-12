@@ -152,7 +152,22 @@ export function Badge({ children, tone = 'mute' }: { children: ReactNode; tone?:
   return <span className={clsx('inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium', tones[tone])}>{children}</span>
 }
 
-export function Modal({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
+/** On/off switch with a label and optional hint. */
+export function Switch({ checked, onChange, label, hint }: { checked: boolean; onChange: (v: boolean) => void; label: string; hint?: string }) {
+  return (
+    <button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)} className="flex w-full items-center justify-between gap-3 py-1.5 text-left">
+      <span>
+        <span className="block text-sm">{label}</span>
+        {hint && <span className="block text-xs text-mute">{hint}</span>}
+      </span>
+      <span className={clsx('relative h-5 w-9 shrink-0 rounded-full transition', checked ? 'bg-accent' : 'bg-line')}>
+        <span className={clsx('absolute top-0.5 h-4 w-4 rounded-full bg-canvas transition-all', checked ? 'left-[1.1rem]' : 'left-0.5')} />
+      </span>
+    </button>
+  )
+}
+
+export function Modal({ open, onClose, title, children, wide }: { open: boolean; onClose: () => void; title: string; children: ReactNode; wide?: boolean }) {
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -167,7 +182,7 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
         aria-modal="true"
         aria-label={title}
         onMouseDown={(e) => e.stopPropagation()}
-        className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-line bg-panel p-5 sm:rounded-2xl"
+        className={clsx('max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl border border-line bg-panel p-5 sm:rounded-2xl', wide ? 'max-w-xl' : 'max-w-md')}
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-display text-base font-semibold">{title}</h2>

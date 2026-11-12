@@ -74,6 +74,16 @@ VITE_ORDERS_DEPLOY_TX_ARC_MAINNET=
 # Extra reviewed swap routers the browser may use on mainnet (comma-separated). Usually empty.
 VITE_SWAP_TARGETS_ARC=
 
+# ---- Brand links (public, baked into the web build). A social link shows only when set (https only). ----
+VITE_SOCIAL_X=
+VITE_SOCIAL_DISCORD=
+VITE_SOCIAL_TELEGRAM=
+VITE_SOCIAL_GITHUB=
+VITE_DOCS_URL=
+VITE_SUPPORT_URL=
+VITE_TERMS_URL=
+VITE_PRIVACY_URL=
+
 # ---- Keeper: the wallet that executes orders and earns the keeper fee ----------------------------
 KEEPER_ENABLED=true
 ${keeperNote}KEEPER_PRIVATE_KEY=${keeperKey}

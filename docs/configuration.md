@@ -12,6 +12,8 @@ Vite exposes only variables that start with `VITE_`. These are public by design.
 | `VITE_ORDERS_ADDRESS_ARC_MAINNET` | For orders on mainnet | Contract you deployed on Arc mainnet |
 | `VITE_ORDERS_DEPLOY_TX_ARC_TESTNET` | Optional | Deployment transaction hash. Lets history reads start at the deployment block instead of a bounded lookback |
 | `VITE_ORDERS_DEPLOY_TX_ARC_MAINNET` | Optional | Same, for mainnet |
+| `VITE_SOCIAL_X`, `VITE_SOCIAL_DISCORD`, `VITE_SOCIAL_TELEGRAM`, `VITE_SOCIAL_GITHUB` | Optional | Footer social links (https only). A link shows only when set; GitHub defaults to this repository |
+| `VITE_DOCS_URL`, `VITE_SUPPORT_URL`, `VITE_TERMS_URL`, `VITE_PRIVACY_URL` | Optional | Footer links. Terms and Privacy open a plain-language placeholder until set |
 | `VITE_DEFAULT_NETWORK` | Optional (`arc-testnet`) | `arc` or `arc-testnet`. The network a first-time visitor opens on. A visitor's own choice is remembered and wins |
 
 Changing a `VITE_` variable needs a dev-server restart.

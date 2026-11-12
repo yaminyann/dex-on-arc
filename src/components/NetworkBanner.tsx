@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { X } from 'lucide-react'
 import type { NetworkConfig } from '@/trading/networks'
+import { useSettings } from '@/trading/settings'
 import { Notice } from './ui'
 
 const key = (network: NetworkConfig) => `arc-terminal-banner-${network.key}`
 
 /** Testnet explanation (dismissible, remembered) or the permanent mainnet real-funds warning. */
 export function NetworkBanner({ network }: { network: NetworkConfig }) {
+  const { showNetworkBanner } = useSettings()
   const [hidden, setHidden] = useState(() => network.isTestnet && localStorage.getItem(key(network)) === '1')
   if (!network.isTestnet) {
     return (
@@ -15,7 +17,7 @@ export function NetworkBanner({ network }: { network: NetworkConfig }) {
       </Notice>
     )
   }
-  if (hidden) return null
+  if (hidden || !showNetworkBanner) return null
   return (
     <div className="relative">
       <Notice tone="info" title="Arc Testnet">

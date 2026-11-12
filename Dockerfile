@@ -23,15 +23,32 @@ ARG VITE_ORDERS_DEPLOY_TX_ARC_TESTNET=
 ARG VITE_ORDERS_ADDRESS_ARC_MAINNET=
 ARG VITE_ORDERS_DEPLOY_TX_ARC_MAINNET=
 ARG VITE_SWAP_TARGETS_ARC=
+ARG VITE_SOCIAL_X=
+ARG VITE_SOCIAL_DISCORD=
+ARG VITE_SOCIAL_TELEGRAM=
+ARG VITE_SOCIAL_GITHUB=
+ARG VITE_DOCS_URL=
+ARG VITE_SUPPORT_URL=
+ARG VITE_TERMS_URL=
+ARG VITE_PRIVACY_URL=
 ENV VITE_DEFAULT_NETWORK=$VITE_DEFAULT_NETWORK \
     VITE_ORDERS_ADDRESS_ARC_TESTNET=$VITE_ORDERS_ADDRESS_ARC_TESTNET \
     VITE_ORDERS_DEPLOY_TX_ARC_TESTNET=$VITE_ORDERS_DEPLOY_TX_ARC_TESTNET \
     VITE_ORDERS_ADDRESS_ARC_MAINNET=$VITE_ORDERS_ADDRESS_ARC_MAINNET \
     VITE_ORDERS_DEPLOY_TX_ARC_MAINNET=$VITE_ORDERS_DEPLOY_TX_ARC_MAINNET \
-    VITE_SWAP_TARGETS_ARC=$VITE_SWAP_TARGETS_ARC
+    VITE_SWAP_TARGETS_ARC=$VITE_SWAP_TARGETS_ARC \
+    VITE_SOCIAL_X=$VITE_SOCIAL_X \
+    VITE_SOCIAL_DISCORD=$VITE_SOCIAL_DISCORD \
+    VITE_SOCIAL_TELEGRAM=$VITE_SOCIAL_TELEGRAM \
+    VITE_SOCIAL_GITHUB=$VITE_SOCIAL_GITHUB \
+    VITE_DOCS_URL=$VITE_DOCS_URL \
+    VITE_SUPPORT_URL=$VITE_SUPPORT_URL \
+    VITE_TERMS_URL=$VITE_TERMS_URL \
+    VITE_PRIVACY_URL=$VITE_PRIVACY_URL
 # Only what the build reads, so editing nginx or server files does not rerun the (slow, memory-hungry) build.
 COPY package.json index.html vite.config.ts tailwind.config.js postcss.config.js tsconfig.json ./
 COPY src ./src
+COPY public ./public
 RUN node node_modules/vite/bin/vite.js build
 
 # ---------- web (nginx) ----------
@@ -51,6 +68,7 @@ RUN bun install --frozen-lockfile --production
 COPY tsconfig.json tsconfig.server.json ./
 COPY server ./server
 COPY src ./src
+COPY public ./public
 # The indexer database lives here. Mount a volume on it or history is rebuilt from chain on every deploy.
 RUN mkdir -p /app/data && chown -R bun:bun /app/data
 USER bun

@@ -26,10 +26,10 @@ const KINDS: { id: Kind; label: string; sellOnly?: boolean; buyOnly?: boolean }[
 
 export function TradePanel({ network, base, oracle }: { network: NetworkConfig; base: TokenInfo | undefined; oracle: OracleState | undefined }) {
   const { address } = useAccount()
-  const { slippageBps, expiryDays } = useSettings()
+  const { slippageBps, expiryDays, defaultOrderType } = useSettings()
   const health = useBackendHealth()
   const [pickedSide, setSide] = useState<number>(Side.BUY)
-  const [kind, setKind] = useState<Kind>('market')
+  const [kind, setKind] = useState<Kind>(defaultOrderType)
   const current = KINDS.find((k) => k.id === kind)!
   // The order type can force a side (stops are sell-only, DCA is buy-only).
   const side = current.sellOnly ? Side.SELL : current.buyOnly ? Side.BUY : pickedSide
