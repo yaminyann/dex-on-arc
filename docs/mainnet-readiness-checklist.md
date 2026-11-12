@@ -11,7 +11,7 @@ Legend: **Done** = verified by an automated or live test (evidence given). **Par
 | 1.1 | Independent third-party audit of the exact bytecode and compiler settings | **Open (blocker)** | None. v2 additions (executeMany, executeFor self-call, minimum order size, expiring config) are new surface |
 | 1.2 | Unit, fuzz and invariant tests pass | Done | 191 Foundry tests (Foundry v1.7.1), including 16 for v2 |
 | 1.3 | Runtime size under the 24,576-byte limit | Done | 23,778 bytes; CI runs `forge build --sizes` |
-| 1.4 | Escrow can only leave to the owner, the keeper fee recipient or the exact-amount swap target | Partial | Invariant tests pass. Live: unknown targets rejected; the live check that hostile calldata leaves escrow and allowances untouched did not finish (test router out of USDC), see the test report |
+| 1.4 | Escrow can only leave to the owner, the keeper fee recipient or the exact-amount swap target | Done | Invariant tests; live: six hostile executions rejected with escrow and allowances untouched, then an honest execution paid the owner with no standing approval |
 | 1.5 | Reentrancy: all state-changing paths guarded; `executeFor` reachable only by the contract | Done | Foundry hostile-target test; `NotSelf` check |
 | 1.6 | Owner cannot withdraw escrow; no upgrade path; no rescue | Done | Code review; access-control live scenario |
 | 1.7 | Config changes timelocked, visible, expiring | Done | Live scenario "timelock": delay 3600 s on testnet, early apply rejected, cancel works, `ConfigQueued` carries content |
@@ -36,7 +36,7 @@ Legend: **Done** = verified by an automated or live test (evidence given). **Par
 | 2.4 | KyberSwap router address and sell amount validated; unexpected router refused | Done | Unit tests with live-shaped fixtures; router has code on Arc mainnet |
 | 2.5 | 0x AllowanceHolder address and 0x API behaviour on Arc | **Partial** | Address has code on Arc mainnet; never exercised with a real 0x key |
 | 2.6 | Router(s) allowlisted on the mainnet contract through the timelock | **Owner** | Testnet rehearsal done with a second test router |
-| 2.7 | Gateway degrades gracefully (timeouts, breaker, budgets, fallback) | Partial | Unit tests; the keeper failed over from an empty router A to router B live (receipts checked). The explicit disable-router-then-failover scenario did not finish live |
+| 2.7 | Gateway degrades gracefully (timeouts, breaker, budgets, fallback) | Done (testnet) | Unit tests; live: keeper failed over from an empty router and from a disabled router (receipts checked) |
 | 2.8 | `GATEWAY_SIMULATE` eth_call check demotes broken quotes | Partial | Unit tests; skipped when allowance is insufficient |
 | 2.9 | Secrets stay out of logs and alerts | Done | `redactSecrets` tests; verified live that an RPC URL in an error is redacted |
 
@@ -44,8 +44,8 @@ Legend: **Done** = verified by an automated or live test (evidence given). **Par
 
 | # | Item | Status | Evidence / gap |
 | --- | --- | --- | --- |
-| 3.1 | Executes DCA, stop-loss, take-profit, trailing, OCO, stop-limit, expiry refunds | Done except trailing re-run | Live on v2: DCA, stop-loss, take-profit, expiry refund; trailing and OCO passed in an earlier v2 run. OCO and stop-limit fill re-verified on a clean state after the keeper fixes. Trailing stop re-run on v2 after the fixes is pending. All eleven passed on the v1 harness |
-| 3.2 | Batches ready orders into one `executeMany` | Done (2 orders per batch) | Three keeper `executeMany` transactions, one with a skipped item (`BatchItemFailed`). A batch of three completing fully is pending |
+| 3.1 | Executes DCA, stop-loss, take-profit, trailing, OCO, stop-limit, expiry refunds | Done (testnet) | Live full run 14/14 on v2, with hashes in the report |
+| 3.2 | Batches ready orders into one `executeMany` | Done | Live: a batch of three orders in one transaction, plus a batch with one skipped item |
 | 3.3 | Profit gate, gas floor, explicit nonces, standby failover | Partial | Unit tests and live runs; mainnet gas economics unmeasured |
 | 3.4 | Keeper key never shared with another sender | Done | Found by the live run: a shared key raced the explicit nonces. The testnet keeper now has its own key |
 | 3.5 | Keeper retry backoff short enough for stop-losses | Done | Found by the live run: a 10-minute backoff delayed a stop-limit. Default now 5 s base, 60 s cap |

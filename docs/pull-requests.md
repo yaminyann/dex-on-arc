@@ -40,9 +40,9 @@ Verification: 11/11 live testnet end-to-end scenarios on the v1 harness through 
 
 **Live testnet campaign** (`docs/test-reports/README.md`, with transaction hashes):
 
-- Verified live: DCA, stop-loss, take-profit, expiry refund, cancel refund (including with a dead oracle and while paused), `executeMany` (three keeper transactions, one with a skipped item), timelock (exactly 3,600 s, early apply rejected, cancel), access control (11 admin functions), oracle protection (stale, future-dated, mismatched round, zero, negative, reverting).
-- Also verified live on a clean state after the fixes: OCO and stop-limit fill, and the keeper failing over from an empty router A to router B (receipts checked).
-- **Not verified live** (test routers ran out of USDC; the faucet is captcha-gated): a batch of three, the last three hostile-calldata cases, and the scripted disable-router failover scenario. Scripts are ready to finish them.
+- Verified live earlier: DCA, stop-loss, take-profit, expiry refund, cancel refund (including with a dead oracle and while paused), `executeMany` (three keeper transactions, one with a skipped item), timelock (exactly 3,600 s, early apply rejected, cancel), access control (11 admin functions), oracle protection (stale, future-dated, mismatched round, zero, negative, reverting).
+- After the wallets were funded the final runs passed completely: **full end-to-end 14/14** (limit, stop-loss, take-profit, trailing, OCO, stop-limit, cancel, expiry, DCA, market swap, minimum size, paged views, a three-order `executeMany`) and **security suite 8/8** (access control, timelock, pause, oracle protection, router allowlist with six hostile executions, instant router disable with keeper failover).
+- Not proven: behaviour with real aggregators and Chainlink feeds on mainnet (needs Arc's Foundry fork), and router A is currently disabled on testnet with its timelocked re-enable queued.
 - Defects the campaign found, all fixed: keeper and script sharing one key, a 10-minute backoff, no fallback to a second provider, and the v2 contract exceeding the size limit.
 
 `docs/mainnet-readiness-checklist.md` lists every blocker (audit, oracle plan, fork test with real calldata, multisig owner, 48 h delay, KMS for the keeper key).

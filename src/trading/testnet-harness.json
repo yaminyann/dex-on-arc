@@ -78,6 +78,11 @@
       "label": "swap router A re-enable",
       "changeId": "0x6b7725dc31e75e128df3814b1bba8e5bff239363e51658822e0a2420b163e999",
       "eta": 1794442100
+    },
+    {
+      "label": "swap router A re-enable",
+      "changeId": "0xaed1e5a6e62e6db089f7043ae14ac1209e8292c4db25428a1f6d794bc0361c8e",
+      "eta": 1794472369
     }
   ],
   "deployedAt": "2026-11-11T20:03:04.189Z",

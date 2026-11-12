@@ -238,7 +238,6 @@ QuoteGateway (backend)
 | --- | --- |
 | Contract v2 | min order size, expiring config, `ConfigQueued` content, oracle round check, paged views, `executeMany`, renounce বন্ধ। 191 Foundry টেস্ট পাস; size 23,778 / 24,576 byte |
 | Live verified (testnet) | DCA, stop-loss, take-profit, expiry refund, cancel refund (oracle dead / pause অবস্থায় সহ), `executeMany` (2 order, 3টি tx), timelock (ঠিক 3600s, early apply reject, cancel), access control (11 টি admin function), oracle (stale, future, mismatched round, zero, negative, reverting), pause, ownership |
-| Live (পরে clean state এ) | OCO ও stop-limit fill v2 তে পাস; keeper খালি router A থেকে B তে failover করেছে (receipt যাচাই) |
-| Live সম্পূর্ণ হয়নি | 3-order batch, router allowlist এর শেষ তিনটি hostile calldata case, router failover। কারণ: test router এর USDC শেষ; faucet captcha লাগে |
+| Live (fund করার পর, চূড়ান্ত) | **Full e2e 14/14** (limit, stop-loss, take-profit, trailing, OCO, stop-limit, cancel, expiry, DCA, market swap, min size, paged views, 3-order executeMany) ও **security suite 8/8** (router allowlist এ 6টি hostile execution reject, router disable করে keeper এর B তে failover, oracle, timelock, access control, pause)। Hash সহ report: test-reports/README.md |
 | Campaign এ পাওয়া bug | keeper ও script একই key (nonce race), backoff 10 মিনিট পর্যন্ত, প্রথম provider fail করলে পরেরটি try না করা (সব fix)। v2 size limit পার হয়েছিল (24,800 B) |
 | Mainnet | **কোনো deploy হয়নি।** Audit, oracle পরিকল্পনা, fork test ও owner multisig বাকি; checklist দেখুন |

@@ -1,0 +1,353 @@
+{
+  "label": "full",
+  "chainId": 5042002,
+  "orders": "0xa83efe842010dbd470dfe7cc210d61c4edd908aa",
+  "trader": "0x64644EA1B5a298E7d2934aF26BA8E92fdA04b3A0",
+  "ranAt": "2026-11-12T07:30:52.492Z",
+  "passed": 14,
+  "total": 14,
+  "results": [
+    {
+      "name": "oracle reads test feeds through the order contract",
+      "ok": true,
+      "detail": "tBTC $90091.38, tETH $2831.38, tSOL $73.31",
+      "seconds": 6,
+      "txs": [],
+      "contractEvents": []
+    },
+    {
+      "name": "limit sell fills through keeper after price rises",
+      "ok": true,
+      "detail": "received 0.461455 USDC at execution price 93507.59999999999",
+      "seconds": 12,
+      "txs": [
+        {
+          "fn": "createOrder",
+          "hash": "0xa4815415b02a0175f10e4fb4afcbc095b547614bf6ccc9351d74f326c94d30f1"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0x550f76cdab496e254ddc442f01a9984c4e755d8b580ad50db0f97f063a1df2d3"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0x0880cb75c4b31cfd411e273de429af9cc673e2910487abc2c1191453fc564645"
+        }
+      ],
+      "contractEvents": [
+        {
+          "event": "OrderExecuted",
+          "id": "55",
+          "txHash": "0x65f6dafab4f39898c76218685ead939c7bf85ecd7eb25466471ca8bf1656d274",
+          "block": "72011747"
+        }
+      ]
+    },
+    {
+      "name": "stop-loss sells on a drop",
+      "ok": true,
+      "detail": "filled at 2599.661111111111",
+      "seconds": 12,
+      "txs": [
+        {
+          "fn": "createOrder",
+          "hash": "0x18e77c43ac55c3ace9ad7549e6cf1818b8521b30ed7001c2c374d0fb9bb9c17f"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0x03397993f2fa5b4048b8062d90acfa19768e74162463c88e819a4e82e276cdec"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0x4c4082837f7220a75e31248a16ef8c2d0913257df171de33d6e20474601fb332"
+        }
+      ],
+      "contractEvents": [
+        {
+          "event": "OrderExecuted",
+          "id": "56",
+          "txHash": "0xb7991c48863b1e6ddd560f5961ce192b8bff05c2f3418c44fd7353d6d90d495a",
+          "block": "72011770"
+        }
+      ]
+    },
+    {
+      "name": "take-profit sells on a rise",
+      "ok": true,
+      "detail": "filled at 78.28175",
+      "seconds": 12,
+      "txs": [
+        {
+          "fn": "createOrder",
+          "hash": "0x145069913ae8c5dda59d75c5ff3391f669b0808c4d65a7191768c2fb7fab9ddd"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0x865ef2590fc228ed506bb6931fc689fe2277326a114cb0cc626f01117b5f7566"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0xb45bac7bf6cb0af8744b5439039d9608b5ed359a00d045f310dc4d41d637c3cd"
+        }
+      ],
+      "contractEvents": [
+        {
+          "event": "OrderExecuted",
+          "id": "57",
+          "txHash": "0x0abecca7ed53d29b7b3e7d9668670ec879b90618903f665e795c7cc3b0281cee",
+          "block": "72011793"
+        }
+      ]
+    },
+    {
+      "name": "trailing stop records the peak then sells on reversal",
+      "ok": true,
+      "detail": "peak 100902.34174577, filled at 90630.4",
+      "seconds": 15,
+      "txs": [
+        {
+          "fn": "createOrder",
+          "hash": "0xd4e490f9440ff73bf597d52e4b830c96e5928552c370c95142e91996a5348317"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0x3a5db865f1bcb5bf642f5cecd644a042ef29d88fadfcd4b9c807b54307aa8176"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0xd64dac2b79ef580dd0303f69ae13669592c22c2c41178e5a16d7d017220ab4a8"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0xb015e3847698efdf4ecd17067a613862eba2119c49171e8c7c8dfa111fae332b"
+        }
+      ],
+      "contractEvents": [
+        {
+          "event": "TrailingPeakUpdated",
+          "id": "58",
+          "txHash": "0x15718746a9b59217c8122b6a49338a89e8abf1aa463b96a44f0a4a968fe57280",
+          "block": "72011813"
+        },
+        {
+          "event": "OrderExecuted",
+          "id": "58",
+          "txHash": "0xebddbeafcf678fd5c9069240bacdaa74238b79aaf9c31b84ffeeaf9a352174d2",
+          "block": "72011827"
+        }
+      ]
+    },
+    {
+      "name": "OCO: take-profit leg fires once and the order cannot run again",
+      "ok": true,
+      "detail": "executed once; further execution reports \"not open\"",
+      "seconds": 12,
+      "txs": [
+        {
+          "fn": "createOrder",
+          "hash": "0x8a05f8da34f84680aa5171f6ce0418b509f7d6a35082449e1daadc3294f624c8"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0xe2b9e4c88497de9d047ef452351f8ae0dcbfefca0925fc44613a742598bbb610"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0xf32b805b7e54fcfc675ffcc47871e4cd44a9028a94bc814b65d4a1469ef59678"
+        }
+      ],
+      "contractEvents": [
+        {
+          "event": "OrderExecuted",
+          "id": "59",
+          "txHash": "0x910d904c42fe256fe37def6b5abb475caf5efb4201d51293732fc7fff5e0ff0a",
+          "block": "72011848"
+        }
+      ]
+    },
+    {
+      "name": "stop-limit: activation persists, no fill below the limit, fills after a rebound",
+      "ok": true,
+      "detail": "activated, held unfilled below limit, filled at 69.1365 after rebound",
+      "seconds": 33,
+      "txs": [
+        {
+          "fn": "createOrder",
+          "hash": "0x635134a9ef104c57398e5be265833e4a25b99bcde87e10e3bb50607ab1898d37"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0xe4a78a8732923844bda9f9caa40726786c550ce3bf7f826e3a85a4299112c584"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0xb85277567490c6a19227efdadcc3cd513e2dc7d937759e30b26083087ac642e7"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0xeaf0d4705a1d12b41081d1db52907946b80c271b0cac6d493b5869b79573f462"
+        }
+      ],
+      "contractEvents": [
+        {
+          "event": "StopActivated",
+          "id": "60",
+          "txHash": "0x261389af3f284e980ffa7d5b63d0c4e0ba7320acd6bf17bcdee507f6ec4bf268",
+          "block": "72011870"
+        },
+        {
+          "event": "OrderExecuted",
+          "id": "60",
+          "txHash": "0xe74b6f0568ea764f459b3a6fd1a7ca2d1f241cb570cc59335f6ed8b826ff862e",
+          "block": "72011915"
+        }
+      ]
+    },
+    {
+      "name": "cancel refunds the escrow",
+      "ok": true,
+      "detail": "escrow taken then fully refunded",
+      "seconds": 4,
+      "txs": [
+        {
+          "fn": "createOrder",
+          "hash": "0xe84f48192390afe41d4bc890da76b0ec9129c0f1ec3f597d6dca31d1906ef298"
+        },
+        {
+          "fn": "cancelOrder",
+          "hash": "0x62a7b1385c06dc24523ba2a0495e1c422191b008bfa0ccf4778b8ad2f06c9d0c"
+        }
+      ],
+      "contractEvents": []
+    },
+    {
+      "name": "expired order is refunded by a keeper",
+      "ok": true,
+      "detail": "expired and refunded",
+      "seconds": 50,
+      "txs": [
+        {
+          "fn": "createOrder",
+          "hash": "0xde4bf32d6d222bfd5a56188353c7be99c4dce0f4f1cbdf58439a30dc5dba1841"
+        }
+      ],
+      "contractEvents": [
+        {
+          "event": "OrderExpired",
+          "id": "62",
+          "txHash": "0xba46a441e3da97679e19ad62c986c383712a753b7563148259ff290890b1ad6b",
+          "block": "72012021"
+        }
+      ]
+    },
+    {
+      "name": "DCA buys on schedule, then pause, resume and cancel refund the rest",
+      "ok": true,
+      "detail": "1 buy executed (0.4 USDC), the remaining budget was refunded",
+      "seconds": 8,
+      "txs": [
+        {
+          "fn": "createDca",
+          "hash": "0x61bf344ef0024bee377a3eca5c18b0f4a52e69c5cebdfffee7a454ef6ff92a3a"
+        },
+        {
+          "fn": "pauseDca",
+          "hash": "0x1d6acedbd083722969a7642f49259f53c2377f366890345345dde46c55da42f1"
+        },
+        {
+          "fn": "resumeDca",
+          "hash": "0x9a2be39bbe9bacd718160ef366cfe24d4cc2571c01f5bfff31ab86267b645cdc"
+        },
+        {
+          "fn": "cancelDca",
+          "hash": "0xb2b9db07ba13ae90216006ad37eb5265c9f6eb386211be6c50e36ba60ded1541"
+        }
+      ],
+      "contractEvents": [
+        {
+          "event": "DcaExecuted",
+          "id": "3",
+          "txHash": "0xe5677c5726037ce9ed592426bcac324da83e0a73b343ce34bf08ce0e8c82b7de",
+          "block": "72012032"
+        }
+      ]
+    },
+    {
+      "name": "market swap through the test router (what the UI sends)",
+      "ok": true,
+      "detail": "0.3 USDC bought 0.000105849380149483 tETH",
+      "seconds": 2,
+      "txs": [
+        {
+          "fn": "approve",
+          "hash": "0x677360b38bd12d81507b4d2742ac84bd9f76486aa723b0626d3e356e31a864ef"
+        },
+        {
+          "fn": "swapExactIn",
+          "hash": "0x2447479dc03ea8c6dac21d20e557a507d9176042dc1f9815a2e05b59af8f0bf5"
+        }
+      ],
+      "contractEvents": []
+    },
+    {
+      "name": "v2: an order below the minimum size is rejected",
+      "ok": true,
+      "detail": "0.05 USDC rejected (minimum 0.1)",
+      "seconds": 1,
+      "txs": [],
+      "contractEvents": []
+    },
+    {
+      "name": "v2: paged views agree with the full id list",
+      "ok": true,
+      "detail": "8 orders, page of 3 matches",
+      "seconds": 1,
+      "txs": [],
+      "contractEvents": []
+    },
+    {
+      "name": "v2: a keeper batches several ready orders into one executeMany transaction",
+      "ok": true,
+      "detail": "3 orders executed in 1 transaction(s), 3 in a single executeMany",
+      "seconds": 13,
+      "txs": [
+        {
+          "fn": "createOrder",
+          "hash": "0xc900231f23c8a46501540690a4c04a111c1b66cdae127b4bb8d18971c9651227"
+        },
+        {
+          "fn": "createOrder",
+          "hash": "0xddc89db30f737058c475c876c12546cb700e050f4a8770ca861b29d666b20ea7"
+        },
+        {
+          "fn": "createOrder",
+          "hash": "0xca24286134f3e31e3239966f9867a5dba8e40dc5b650bf8c564e4c5a8ab9135d"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0xb3ca8e1f3791c27f888dc20f8dc6c450cb0bf6e73e505c43db5df974289e882b"
+        }
+      ],
+      "contractEvents": [
+        {
+          "event": "OrderExecuted",
+          "id": "63",
+          "txHash": "0x31081092cee134dfebe26b864a1fbea9084efe0875cd860f48749441052757e1",
+          "block": "72012069"
+        },
+        {
+          "event": "OrderExecuted",
+          "id": "64",
+          "txHash": "0x31081092cee134dfebe26b864a1fbea9084efe0875cd860f48749441052757e1",
+          "block": "72012069"
+        },
+        {
+          "event": "OrderExecuted",
+          "id": "65",
+          "txHash": "0x31081092cee134dfebe26b864a1fbea9084efe0875cd860f48749441052757e1",
+          "block": "72012069"
+        }
+      ]
+    }
+  ]
+}
