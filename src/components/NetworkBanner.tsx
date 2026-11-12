@@ -21,7 +21,7 @@ export function NetworkBanner({ network }: { network: NetworkConfig }) {
   return (
     <div className="relative">
       <Notice tone="info" title="Arc Testnet">
-        <span className="pr-6">
+        <span className="pr-8">
           The test tokens (tBTC, tETH, tSOL) follow a public test price that anyone can move and swap through a test router, so every order type can be tried. These are not market prices.
         </span>
       </Notice>
@@ -31,7 +31,7 @@ export function NetworkBanner({ network }: { network: NetworkConfig }) {
           localStorage.setItem(key(network), '1')
           setHidden(true)
         }}
-        className="absolute right-2 top-2 rounded p-1 text-mute hover:bg-raised hover:text-ink"
+        className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center text-mute hover:bg-raised hover:text-ink"
       >
         <X className="h-3.5 w-3.5" />
       </button>

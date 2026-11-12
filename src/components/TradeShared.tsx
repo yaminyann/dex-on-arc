@@ -106,7 +106,7 @@ export function ConfirmModal({
           const active = busy && i === activeIdx
           return (
             <li key={s.id} className="flex items-center gap-2 text-xs">
-              {done ? <CheckCircle2 className="h-4 w-4 text-up" /> : active ? <Loader2 className="h-4 w-4 animate-spin text-accent" /> : <Circle className="h-4 w-4 text-mute" />}
+              {done ? <CheckCircle2 className="h-4 w-4 text-up" /> : active ? <Loader2 className="h-4 w-4 animate-spin" /> : <Circle className="h-4 w-4 text-mute" />}
               <span className={active ? 'text-ink' : 'text-mute'}>
                 {s.label}
                 {active && (phase === 'wallet' ? ' - confirm in wallet' : phase === 'confirming' ? ' - waiting for confirmation' : '')}
@@ -129,7 +129,7 @@ export function ConfirmModal({
 
 export function BalanceHint({ balance, decimals, symbol, onMax }: { balance: bigint | undefined; decimals: number; symbol: string; onMax: () => void }) {
   return (
-    <button type="button" onClick={onMax} className="num hover:text-ink">
+    <button type="button" onClick={onMax} className="num inline-flex min-h-[44px] items-center hover:text-ink md:min-h-0">
       {balance === undefined ? '-' : `Max ${Number(balance) / 10 ** decimals > 1e6 ? '>1M' : (Number(balance) / 10 ** decimals).toLocaleString(undefined, { maximumFractionDigits: 6 })}`} {symbol}
     </button>
   )

@@ -4,7 +4,8 @@ import { useSettings } from '@/trading/settings'
 import { useOracle } from '@/trading/hooks'
 import { useMarket, type Timeframe } from '@/trading/market'
 import { useIndicativePrice, useTokenList } from '@/trading/tokens'
-import { Button, Panel, Skeleton } from './ui'
+import { Button, Panel, Segmented, Skeleton } from './ui'
+import { clsx } from 'clsx'
 import { PairBar, TokenSelector } from './PairBar'
 import { PriceChart } from './PriceChart'
 import { TradePanel } from './TradePanel'
@@ -17,6 +18,9 @@ export function Terminal({ network }: { network: NetworkConfig }) {
   const { setNetworkKey, defaultTimeframe } = useSettings()
   const [baseAddr, setBaseAddr] = useState<string | undefined>()
   const [tf, setTf] = useState<Timeframe>(defaultTimeframe)
+  // Phones show one section at a time, like an app. Wide screens show them all.
+  const [pane, setPane] = useState<'order' | 'chart' | 'orders' | 'account'>('order')
+  const only = (id: typeof pane) => (pane === id ? '' : 'hidden lg:block')
   const list = useTokenList(network)
   const bases = list.tokens
   // Derived: an address picked on another network falls back to this network's first token.
@@ -40,7 +44,7 @@ export function Terminal({ network }: { network: NetworkConfig }) {
             </div>
           ) : list.error ? (
             <>
-              <h1 className="font-display text-lg font-semibold">Could not load the token list</h1>
+              <h1 className="text-2xl">Could not load the token list</h1>
               <p className="mx-auto mt-2 max-w-sm text-sm text-mute">The backend could not reach the token registry. Check that the API is running, then retry.</p>
               <Button variant="primary" className="mt-5" onClick={list.retry}>
                 Retry
@@ -48,7 +52,7 @@ export function Terminal({ network }: { network: NetworkConfig }) {
             </>
           ) : (
             <>
-              <h1 className="font-display text-lg font-semibold">Trading is not enabled on {network.label} yet</h1>
+              <h1 className="text-2xl">Trading is not enabled on {network.label} yet</h1>
               <p className="mx-auto mt-2 max-w-sm text-sm text-mute">No tokens are available for this network. Switch to Arc Testnet to try every order type with test tokens.</p>
               <Button variant="primary" className="mt-5" onClick={() => setNetworkKey('arc-testnet')}>
                 Use Arc Testnet
@@ -63,7 +67,9 @@ export function Terminal({ network }: { network: NetworkConfig }) {
   return (
     <div className="space-y-3">
       <NetworkBanner network={network} />
-      {/* One grid so the order form sits right under the price header on small screens, beside the chart on wide ones. */}
+      <div className="lg:hidden">
+        <Segmented className="w-full" value={pane} onChange={setPane} options={[{ id: 'order', label: 'Order' }, { id: 'chart', label: 'Chart' }, ...(network.ordersAddress ? [{ id: 'orders' as const, label: 'Orders' }] : []), { id: 'account', label: 'Account' }]} />
+      </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
         <Panel className="p-4 lg:col-start-1 lg:row-start-1">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
@@ -72,12 +78,12 @@ export function Terminal({ network }: { network: NetworkConfig }) {
           </div>
         </Panel>
 
-        <div className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+        <div className={clsx('min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1', only('order'))}>
           <TradePanel network={network} base={base} oracle={oracle.data} />
         </div>
 
         {hasReference ? (
-          <Panel className="min-w-0 lg:col-start-1 lg:row-start-2">
+          <Panel className={clsx('min-w-0 lg:col-start-1 lg:row-start-2', only('chart'))}>
             <PriceChart
               candles={market.candles}
               loading={market.loading}
@@ -89,18 +95,18 @@ export function Terminal({ network }: { network: NetworkConfig }) {
             />
           </Panel>
         ) : (
-          <Panel className="min-w-0 p-4 text-xs text-mute lg:col-start-1 lg:row-start-2">
+          <Panel className={clsx('min-w-0 p-4 text-xs text-mute lg:col-start-1 lg:row-start-2', only('chart'))}>
             No reference chart exists for {base.symbol}. Prices come from live aggregator quotes, and the swap form shows the route for your exact size.
           </Panel>
         )}
 
         {network.ordersAddress && (
-          <div className="min-w-0 lg:col-start-1 lg:row-start-3">
+          <div className={clsx('min-w-0 lg:col-start-1 lg:row-start-3', only('orders'))}>
             <OrderTabs network={network} />
           </div>
         )}
 
-        <aside className="min-w-0 space-y-4 lg:col-start-2 lg:row-start-3">
+        <aside className={clsx('min-w-0 space-y-4 lg:col-start-2 lg:row-start-3', only('account'))}>
           <AccountPanel network={network} />
           <TestnetTools network={network} base={base} />
         </aside>

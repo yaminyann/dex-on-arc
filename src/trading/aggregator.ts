@@ -232,6 +232,8 @@ export interface BackendHealth {
   gateway?: { configured: boolean; providers: { id: string; configured: boolean; breaker: string; consecutiveFailures: number }[] }
   keeper: { enabled: boolean; running: boolean; network: string; keeperAddress: string | null; lastTick: number | null; lastError: string | null; executed: number; notes: string[] }
   automationProviders: { id: string; name: string; state: string; summary: string; evidence: string }[]
+  /** True when the operator has switched on the optional chat model for the Agent. */
+  agentChat?: { enabled: boolean }
   /** Fee charged on browser market swaps. `recipient` and `platformFeeProblem` are sent to operators only. */
   platformFee?: { bps: number; recipient?: string } | null
   platformFeeProblem?: string

@@ -8,28 +8,35 @@
 
 ## ০. নতুন: প্ল্যাটফর্মের নাম, পেজ, Agent Station ও Settings
 
-**নাম: Lumarc** (lumen + arc: Arc এর ওপর আলো)। আগের নাম Arcora অন্য কারো ছিল বলে বদলানো হয়েছে। ওয়েব সার্চে "Lumarc" নামে কোনো ক্রিপ্টো প্রকল্প পাওয়া যায়নি, কিন্তু এটা আইনি নিশ্চয়তা নয়: ডোমেইন ও trademark আপনি নিজে যাচাই করে নিন। লোগো একটি arch (arc) আর তার ওপরে একটি উঠতে থাকা বিন্দু, দুই accent রঙের gradient এ। নাম, tagline ও সব লিংক `src/brand.ts` এ এক জায়গায়।
+**নাম: Lumarc** (lumen + arc: Arc এর ওপর আলো)। আগের নাম Arcora অন্য কারো ছিল বলে বদলানো হয়েছে। ওয়েব সার্চে "Lumarc" নামে কোনো ক্রিপ্টো প্রকল্প পাওয়া যায়নি, কিন্তু এটা আইনি নিশ্চয়তা নয়: ডোমেইন ও trademark আপনি নিজে যাচাই করে নিন। লোগো একটি arch (arc) আর তার ওপরে একটি উঠতে থাকা বিন্দু, সমতল accent রঙে। নাম, tagline ও সব লিংক `src/brand.ts` এ এক জায়গায়।
 
-**পেজ (hash route, যেমন `/#/agent`):** Home (landing page), Trade, Dashboard, Agent (আর owner হলে Admin)। **Lending পেজ সরিয়ে দেওয়া হয়েছে।** Layout Hyperliquid এর ঢঙে (ঘন dark panel), কপি নয়। রং এখন indigo বেস আর Iris (বেগুনি-নীল) accent; আরও চারটি accent বেছে নেওয়া যায়: Sky, Ember, Orchid, Gold। আগের teal রঙ আর নেই।
+**পেজ (hash route, যেমন `/#/agent`):** Home (landing page), Trade, Dashboard, Agent (আর owner হলে Admin)। **Lending পেজ সরিয়ে দেওয়া হয়েছে।** ডিজাইন এখন **retro / neo-brutalist** (নিয়ম `DESIGN.md` এ): নরম mist-blue কাগজ আর কালো কালি, পাতলা ১px কালো border, কোনো গোল কোণ নেই, শক্ত offset ছায়া, gradient বা glow নেই। ডিফল্ট accent নরম ল্যাভেন্ডার (soft pastel); আরও চারটি বেছে নেওয়া যায়: Peach, Rose, Sky, Butter (নরম হলুদ)। accent রঙের ওপরের লেখা সবসময় কালো। **মোবাইলে অ্যাপের মতো**: ওপরে ছোট header, নিচে স্থায়ী ৫-ট্যাব bar (Home/Trade, Trade, Dashboard, Agent, Settings)। Wallet connect করা থাকলে landing page দেখায় না, সরাসরি Trade খোলে। Settings এখন আলাদা পেজ (`/#/settings`), dialog নয়; কোনো পেজ crash করলে ফাঁকা স্ক্রিনের বদলে "Reload" কার্ড দেখায়। Keyboard: `g` তারপর `h`/`t`/`d`/`a`/`s`।
 
 - **Dashboard:** Account value, available, escrow, realized / unrealized PnL, balances, সব order, DCA ও fill।
-- **Landing page (Home):** animated hero, আসল তথ্য (কতগুলো token routable, keeper চলছে কি না), product illustration (লেখা আছে "Illustration"), token marquee, features, how it works, লাইভ-অ্যানিমেটেড Agent demo, security, FAQ। কোনো বানানো volume বা user সংখ্যা নেই।
+- **Landing page (Home):** hero তে আসল তথ্য (কতগুলো token routable, keeper চলছে কি না) আর অ্যানিমেটেড Agent chat (লেখা আছে "Example session"; DEX swap, limit, stop-loss, take-profit, trailing, OCO, DCA ও cancel দেখায়), সাতটি order type এর তালিকা, কে কী করে তার টেবিল, Agent permission অংশ, token তালিকা, owner কী পারে ও পারে না, FAQ। কোনো বানানো volume বা user সংখ্যা নেই।
 - **Footer:** Online / network / keeper status, Docs, Terms, Privacy, Risk, social আইকন। Social লিংক শুধু তখনই দেখায় যখন `VITE_SOCIAL_X`, `VITE_SOCIAL_DISCORD`, `VITE_SOCIAL_TELEGRAM` সেট করা থাকে (GitHub ডিফল্টে এই repo)। আমি কোনো handle বানাইনি। Terms ও Privacy এখন সাধারণ ভাষার placeholder; আইনজীবীকে দিয়ে লিখিয়ে `VITE_TERMS_URL` ও `VITE_PRIVACY_URL` দিন।
 
 ### Settings (সঙ্গে সঙ্গে কাজ করে, ব্রাউজারে সেভ থাকে)
 
 | ট্যাব | কী বদলানো যায় |
 | --- | --- |
-| General | App কোন পেজে খুলবে, notification (সব / শুধু error / বন্ধ) ও তার জায়গা, testnet নোট |
+| General | App কোন পেজে খুলবে, network, testnet নোট |
 | Look | Theme (Dark / Light / System), accent রঙ (৫টি), interface size, table density, motion (Full / Reduced / Off) |
+| Display | ১২/২৪ ঘণ্টা সময়, local বা UTC, balance লুকানো (ঝাপসা) |
 | Trading | Max slippage, order expiry, order form কোন টাইপে খুলবে |
 | Chart | Candles বা Line, default timeframe, volume, moving average |
+| Notifications | কোন toast দেখাবে (সব / শুধু error / বন্ধ) ও তার জায়গা |
+| Shortcuts | Keyboard shortcut চালু বা বন্ধ |
 | Agent | Permission সারাংশ, Revoke, আজকের usage রিসেট |
-| Data | Settings export, import, সব রিসেট |
+| Data | Settings export, import (ভুল ফাইলে পরিষ্কার বার্তা), swap history মোছা, সব রিসেট |
+| About | Network, contract, লিংক |
 
 ### Agent Station (কমান্ডে সব কাজ)
 
-এটা chat model নয়; একটি নির্দিষ্ট ব্যাকরণের **command interpreter**। একই লেখা সবসময় একই ফল দেয়; না বুঝলে উদাহরণ দিয়ে ফিরিয়ে দেয়, আন্দাজ করে না।
+এখন সাধারণ ভাষায় **chat** করা যায় (যেমন "sell half my bitcoin if it falls to 80k"), আবার কমান্ডও লেখা যায়। ভেতরে প্রতিটি কাজ একটি নির্দিষ্ট ব্যাকরণের **একটি command** হয়ে যায়; একই লেখা সবসময় একই ফল দেয়।
+
+- **বিনা খরচে (ডিফল্ট):** ব্রাউজারেই নিয়ম দিয়ে পড়া হয়, কোনো model বা নেটওয়ার্ক কল নেই। সাধারণ লেখা command এ বদলে "I read that as: ..." দেখায়, order type নিয়ে প্রশ্নের উত্তর দেয়, আর "what should I do?" লিখলে আপনার holding দেখে ঝুঁকি-নিয়ম থেকে setup প্রস্তাব করে (প্রতিটির কারণসহ; এটা ভবিষ্যদ্বাণী বা financial advice নয়)। অ্যামাউন্ট, দাম বা সময় না থাকলে আন্দাজ না করে জিজ্ঞেস করে।
+- **ঐচ্ছিক model:** backend এ `AGENT_LLM_URL` ও `AGENT_LLM_MODEL` দিলে (যেমন লোকাল Ollama, খরচ নেই, বা কোনো free-tier API) নিয়ম যা পড়তে পারেনি সেই লেখা model এ যায়। শুধু আপনার একটি মেসেজ ও token এর নাম যায়, balance বা address নয়। Model শুধু একটি command দিতে পারে, যা আবার কড়া parser পার হতে হয়; তারপরও readback, আপনার yes আর wallet এর সই লাগে। দৈনিক কলের সীমা আছে।
 
 1. কমান্ড লিখুন: `buy 10 USDC of tBTC`, `sell 50% of tBTC`, `stop loss 0.001 tBTC at 80000`, `take profit ...`, `limit buy tBTC 5 USDC at 70000`, `trailing stop 0.001 tBTC 5%`, `oco 0.001 tBTC sl 80000 tp 100000`, `dca 1 USDC into tBTC daily for 7 days`, `cancel order 12`, `pause dca 3`। দেখার জন্য: `help`, `balance`, `orders`, `price tBTC`।
 2. Agent আসল balance, oracle, quote ও contract এর minimum দিয়ে **plan বানায়** ও দেখায়: কত দিচ্ছেন, কত পাবেন (ন্যূনতম), slippage, expiry, fee, সতর্কতা। তারপর জিজ্ঞেস করে: **"Is this exactly what you want?"**

@@ -28,12 +28,12 @@ export function TokenSelector({ network, bases, value, onChange }: { network: Ne
         aria-haspopup="listbox"
         aria-expanded={open}
         disabled={disabled}
-        className="flex min-h-[44px] items-center gap-2 rounded-lg border border-line bg-raised px-3 text-left enabled:hover:border-accent/50 disabled:cursor-default"
+        className="press flex min-h-[48px] items-center gap-2 border border-line bg-panel px-3 text-left shadow-hard-sm enabled:hover:bg-raised disabled:cursor-default"
       >
         {value ? (
           <>
             <TokenBase token={value} />
-            <span className="font-display text-base font-semibold">{value.symbol}</span>
+            <span className="font-display text-lg">{value.symbol}</span>
             <span className="text-sm text-mute">/ {network.quote.symbol}</span>
           </>
         ) : (
@@ -74,7 +74,7 @@ export function TokenSelector({ network, bases, value, onChange }: { network: Ne
                 <span className="font-medium">{t.symbol}</span>
                 <span className="min-w-0 truncate text-xs text-mute">{t.name}</span>
                 {t.isTest ? (
-                  <span className="ml-auto rounded bg-warn/15 px-1.5 py-0.5 text-[10px] font-semibold text-warn">TEST</span>
+                  <span className="ml-auto border border-line bg-warn px-1.5 py-0.5 font-mono text-[10px] font-semibold text-canvas">TEST</span>
                 ) : (
                   <span className="num ml-auto shrink-0 text-[10px] text-mute/70" title={t.address}>{t.address.slice(0, 6)}…{t.address.slice(-4)}</span>
                 )}
@@ -100,8 +100,8 @@ export function PairBar({ market, oracle, oracleLoading, indicative, hasReferenc
       {showMarket ? (
         <>
           <div>
-            <div className="text-[11px] uppercase tracking-wider text-mute">Reference price</div>
-            {market.loading && !s ? <Skeleton className="mt-1 h-7 w-28" /> : <div className="num font-display text-2xl font-semibold">{market.last ? priceFmt(market.last) : '-'}</div>}
+            <div className="text-xs font-semibold text-mute">Reference price</div>
+            {market.loading && !s ? <Skeleton className="mt-1 h-7 w-28" /> : <div className="num text-2xl font-semibold">{market.last ? priceFmt(market.last) : '-'}</div>}
           </div>
           <Stat label="24h change" value={s ? fmtPct(s.changePct) : '-'} tone={s ? (up ? 'up' : 'down') : undefined} />
           <Stat label="24h high" value={s ? priceFmt(s.high) : '-'} />
@@ -110,12 +110,12 @@ export function PairBar({ market, oracle, oracleLoading, indicative, hasReferenc
         </>
       ) : (
         <div>
-          <div className="text-[11px] uppercase tracking-wider text-mute">Swap price (10 USDC)</div>
-          {indicative?.loading ? <Skeleton className="mt-1 h-7 w-28" /> : <div className="num font-display text-2xl font-semibold">{indicative?.price18 ? formatPrice18(indicative.price18, 6) : 'No route'}</div>}
+          <div className="text-xs font-semibold text-mute">Swap price (10 USDC)</div>
+          {indicative?.loading ? <Skeleton className="mt-1 h-7 w-28" /> : <div className="num text-2xl font-semibold">{indicative?.price18 ? formatPrice18(indicative.price18, 6) : 'No route'}</div>}
         </div>
       )}
       <div className={oracle?.status === 'no-contract' || (!showMarket && oracle?.status !== 'ok') ? 'hidden' : ''}>
-        <div className="text-[11px] uppercase tracking-wider text-mute">Onchain oracle</div>
+        <div className="text-xs font-semibold text-mute">Onchain oracle</div>
         {oracleLoading ? (
           <Skeleton className="mt-1 h-5 w-24" />
         ) : oracle?.status === 'ok' ? (
@@ -138,7 +138,7 @@ export function PairBar({ market, oracle, oracleLoading, indicative, hasReferenc
 function Stat({ label, value, tone }: { label: string; value: string; tone?: 'up' | 'down' }) {
   return (
     <div>
-      <div className="text-[11px] uppercase tracking-wider text-mute">{label}</div>
+      <div className="text-xs font-semibold text-mute">{label}</div>
       <div className={`num text-sm ${tone === 'up' ? 'text-up' : tone === 'down' ? 'text-down' : ''}`}>{value}</div>
     </div>
   )

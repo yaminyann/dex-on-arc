@@ -15,9 +15,13 @@ export function fmtPct(n: number, fraction = 2): string {
   return `${n > 0 ? '+' : ''}${s}%`
 }
 
+/** Set from Settings > Display. Read at format time, so tables pick it up on their next refresh. */
+export const timePrefs: { hour12: boolean; utc: boolean } = { hour12: false, utc: false }
+
 export function fmtDateTime(unixSeconds: number): string {
   if (!unixSeconds) return '-'
-  return new Date(unixSeconds * 1000).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  const stamp = new Date(unixSeconds * 1000).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: timePrefs.hour12, timeZone: timePrefs.utc ? 'UTC' : undefined })
+  return timePrefs.utc ? `${stamp} UTC` : stamp
 }
 
 export function fmtDuration(seconds: number): string {

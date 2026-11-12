@@ -19,7 +19,7 @@ const TOKEN_KEY = 'arc-terminal-admin-token'
 function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
   return (
     <Panel className="p-4">
-      <h2 className="font-display text-sm font-semibold">{title}</h2>
+      <h2 className="text-lg">{title}</h2>
       {hint && <p className="mb-3 mt-0.5 text-xs text-mute">{hint}</p>}
       {!hint && <div className="mb-3" />}
       {children}
@@ -29,7 +29,7 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
 
 function AddressLink({ network, address, label }: { network: NetworkConfig; address: string; label?: string }) {
   return (
-    <a href={buildAddressExplorerUrl(network.chainId, address)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-accent" title={address}>
+    <a href={buildAddressExplorerUrl(network.chainId, address)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline underline-offset-2" title={address}>
       {label ? `${label} ${shortAddr(address)}` : shortAddr(address)}
       <ExternalLink className="h-3 w-3" />
     </a>
@@ -78,7 +78,7 @@ export function Admin({ network }: { network: NetworkConfig }) {
       <div className="mx-auto max-w-xl space-y-4 pt-6">
         <Panel className="p-8 text-center">
           <ShieldAlert className="mx-auto h-6 w-6 text-mute" />
-          <h1 className="mt-3 font-display text-lg font-semibold">Owner wallet required</h1>
+          <h1 className="mt-3 text-2xl">Owner wallet required</h1>
           <p className="mx-auto mt-2 max-w-sm text-sm text-mute">
             Connect the contract owner ({shortAddr(s.owner)}) to change settings. Everything here is enforced by the contract, so no other wallet can change anything.
           </p>
@@ -102,7 +102,7 @@ export function Admin({ network }: { network: NetworkConfig }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="font-display text-lg font-semibold">Admin</h1>
+        <h1 className="text-3xl">Admin</h1>
         <Badge tone={s.paused ? 'down' : 'up'}>{s.paused ? 'Paused' : 'Live'}</Badge>
         <span className="text-xs text-mute">
           Contract <AddressLink network={network} address={network.ordersAddress} /> · owner <AddressLink network={network} address={s.owner} />
@@ -346,7 +346,7 @@ function ConfigSection({ network, s, busy, run }: SectionProps) {
               <li key={`${e.txHash}-${e.name}-${i}`} className="flex items-center gap-2">
                 <span className="num w-36 shrink-0 text-mute">{fmtDateTime(e.blockTime)}</span>
                 <span>{e.name}</span>
-                <a href={buildTxExplorerUrl(network.chainId, e.txHash)} target="_blank" rel="noopener noreferrer" className="ml-auto text-mute hover:text-accent" aria-label="Open transaction">
+                <a href={buildTxExplorerUrl(network.chainId, e.txHash)} target="_blank" rel="noopener noreferrer" className="ml-auto text-mute underline" aria-label="Open transaction">
                   <ExternalLink className="h-3 w-3" />
                 </a>
               </li>
@@ -381,7 +381,7 @@ function BackendSection({ network, token, setToken }: { network: NetworkConfig; 
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Admin token"
           aria-label="Admin token"
-          className="num min-h-[40px] min-w-0 flex-1 rounded-lg border border-line bg-raised px-3 text-sm outline-none focus:border-accent"
+          className="num min-h-[44px] min-w-0 flex-1 border border-line bg-panel px-3 text-sm placeholder:text-mute focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
         />
         <Button variant="ghost" type="submit">
           Load

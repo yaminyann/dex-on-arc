@@ -5,6 +5,7 @@
  *  - GET /tokens   tradable token list for a chain (KyberSwap registry, filtered and cached)
  *  - GET /price    indicative 0x price (no transaction data), cached briefly and coalesced
  *  - GET /quote    firm 0x quote including the transaction to sign (never cached)
+ *  - POST /agent-chat  optional language-model help for the Agent chat (off unless AGENT_LLM_URL is set)
  * Run with `bun run server`. The Vite dev server proxies /api to this process.
  *
  * Trust and abuse controls (env, all optional):
@@ -14,6 +15,7 @@
  *   ADMIN_TOKEN         bearer token for /metrics and detailed /health. Unset: loopback-only, direct
  *   UPSTREAM_BUDGET_PER_MIN  global cap on calls to 0x from this process (default 600)
  *   PLATFORM_FEE_BPS / PLATFORM_FEE_RECIPIENT  fee on browser market swaps, paid by the aggregator (max 100 bps)
+ *   AGENT_LLM_URL / AGENT_LLM_MODEL / AGENT_LLM_API_KEY / AGENT_LLM_DAILY_CALLS  optional chat model, see agent-chat.ts
  */
 import { isApiError, parseQuoteRequest, ZEROEX_SUPPORTED_CHAINS } from './zerox'
 import { gateway, readAllowance } from './gateway/instance'
@@ -30,6 +32,7 @@ import { recordSwap } from './indexer/swaps'
 import { swapTargetsFor } from './gateway/targets'
 import { createTokenList } from './gateway/tokens'
 import { parsePlatformFee } from './gateway/fee'
+import { askModel, DailyBudget, loadAgentChatConfig, parseAgentChatInput } from './agent-chat'
 
 const port = Number(process.env.API_PORT ?? 3001)
 const PRICE_TTL_MS = Number(process.env.PRICE_CACHE_TTL_MS ?? 4000)
@@ -44,7 +47,11 @@ const limits = {
   quote: new RateLimiter(Math.round(20 * scale), 60_000),
   other: new RateLimiter(Math.round(240 * scale), 60_000),
   swaps: new RateLimiter(Math.round(30 * scale), 60_000),
+  chat: new RateLimiter(Math.round(12 * scale), 60_000),
 }
+
+const chatCfg = loadAgentChatConfig()
+const chatBudget = chatCfg ? new DailyBudget(chatCfg.dailyCalls) : null
 
 const tokenList = createTokenList()
 const platform = parsePlatformFee()
@@ -70,10 +77,11 @@ const server = Bun.serve({
     metrics.http.requests += 1
     const url = new URL(req.url)
     const isSwapReport = req.method === 'POST' && url.pathname === '/swaps'
-    if (req.method !== 'GET' && !isSwapReport) return json({ error: { code: 'METHOD_NOT_ALLOWED', message: 'GET only (POST /swaps reports a confirmed swap)' } }, 405)
+    const isChat = req.method === 'POST' && url.pathname === '/agent-chat'
+    if (req.method !== 'GET' && !isSwapReport && !isChat) return json({ error: { code: 'METHOD_NOT_ALLOWED', message: 'GET only (POST /swaps reports a confirmed swap, POST /agent-chat asks the optional chat model)' } }, 405)
 
     const socketIp = srv.requestIP(req)?.address
-    const bucket = url.pathname === '/price' ? 'price' : url.pathname === '/quote' ? 'quote' : isSwapReport ? 'swaps' : 'other'
+    const bucket = url.pathname === '/price' ? 'price' : url.pathname === '/quote' ? 'quote' : isSwapReport ? 'swaps' : isChat ? 'chat' : 'other'
     const key = resolveClientIp(req.headers.get('x-forwarded-for'), socketIp, trustedHops)
     if (!limits[bucket].allow(key)) {
       metrics.http.rateLimited += 1
@@ -97,6 +105,7 @@ const server = Bun.serve({
         keeper: view,
         indexer: operator ? indexerStatus() : { ...indexerStatus(), lastError: indexerStatus().lastError ? 'Indexer reported an error. Details are restricted to operators.' : null },
         automationProviders: listProviders(),
+        agentChat: { enabled: Boolean(chatCfg) },
         platformFee: platform.fee ? { bps: platform.fee.bps, ...(operator ? { recipient: platform.fee.recipient } : {}) } : null,
         ...(operator && platform.problem ? { platformFeeProblem: platform.problem } : {}),
       })
@@ -115,6 +124,32 @@ const server = Bun.serve({
         keeper: metrics.keeper,
         gateway: gateway.status(),
       })
+    }
+
+    if (isChat) {
+      if (!originAllowed(req.headers.get('origin'), req.headers.get('referer'), allowedOrigins)) {
+        return json({ error: { code: 'ORIGIN_NOT_ALLOWED', message: 'This origin may not use the chat service.' } }, 403)
+      }
+      if (!chatCfg || !chatBudget) return json({ error: { code: 'AGENT_CHAT_DISABLED', message: 'The optional chat model is not switched on for this backend.' } }, 503)
+      if (Number(req.headers.get('content-length') ?? 0) > 4000) return json({ error: { code: 'INPUT_INVALID', message: 'Message too large.' } }, 413)
+      let body: unknown
+      try {
+        const raw = await req.text()
+        if (raw.length > 4000) return json({ error: { code: 'INPUT_INVALID', message: 'Message too large.' } }, 413)
+        body = JSON.parse(raw)
+      } catch {
+        return json({ error: { code: 'INPUT_INVALID', message: 'Body must be JSON: { "text": string, "tokens": string[], "quote": string }' } }, 400)
+      }
+      const input = parseAgentChatInput(body)
+      if (!input) return json({ error: { code: 'INPUT_INVALID', message: 'A message of 1 to 300 characters and a short token list are required.' } }, 400)
+      if (!chatBudget.take()) return json({ error: { code: 'AGENT_CHAT_BUDGET', message: 'The chat model has reached its daily limit. The built-in rules still work.' } }, 429)
+      try {
+        const out = await askModel(chatCfg, input)
+        return json(out ?? { reply: '', command: null })
+      } catch {
+        metrics.http.upstreamErrors += 1
+        return json({ error: { code: 'AGENT_CHAT_UNAVAILABLE', message: 'The chat model did not answer. The built-in rules still work.' } }, 502)
+      }
     }
 
     if (url.pathname === '/tokens') {

@@ -69,7 +69,7 @@ export function lookupToken(network: NetworkConfig, addr: string): TokenInfo | u
 export function TxLink({ chainId, hash }: { chainId: number; hash?: string }) {
   if (!hash) return <span className="text-mute">-</span>
   return (
-    <a href={buildTxExplorerUrl(chainId, hash)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-accent hover:underline">
+    <a href={buildTxExplorerUrl(chainId, hash)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline underline-offset-2">
       {hash.slice(0, 8)}
       <ExternalLink className="h-3 w-3" />
     </a>

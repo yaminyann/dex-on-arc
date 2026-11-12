@@ -172,8 +172,12 @@ describe('settings', () => {
     expect(s.themePref).toBe('light')
     expect(s.slippageBps).toBe(1000)
     expect(s.expiryDays).toBe(1)
-    // The teal accent was retired; any unknown accent falls back to the default.
-    expect(s.accent).toBe('iris')
+    // Retired accents (iris, teal) and unknown ones fall back to the default.
+    expect(s.accent).toBe('lavender')
+    expect(sanitizeSettings({ accent: 'iris' }).accent).toBe('lavender')
+    // Names from the yellow build map to the nearest soft colour.
+    expect(sanitizeSettings({ accent: 'signal' }).accent).toBe('butter')
+    expect(sanitizeSettings({ accent: 'pink' }).accent).toBe('rose')
     expect(s.scale).toBe('md')
     expect(s.motion).toBe('full')
     expect(s.density).toBe('comfortable')
@@ -185,9 +189,23 @@ describe('settings', () => {
   })
 
   test('valid values survive', () => {
-    const s = sanitizeSettings({ themePref: 'system', accent: 'ember', scale: 'lg', motion: 'reduced', density: 'compact', startPage: 'trade', toasts: 'errors', toastPosition: 'bottom-right', chartType: 'line', defaultOrderType: 'limit', defaultTimeframe: '4h', chartVolume: false, networkKey: 'arc' })
-    expect(s).toMatchObject({ themePref: 'system', accent: 'ember', scale: 'lg', motion: 'reduced', density: 'compact', startPage: 'trade', toasts: 'errors', toastPosition: 'bottom-right', chartType: 'line', defaultOrderType: 'limit', defaultTimeframe: '4h', chartVolume: false, networkKey: 'arc' })
+    const s = sanitizeSettings({ themePref: 'system', accent: 'peach', scale: 'lg', motion: 'reduced', density: 'compact', startPage: 'trade', toasts: 'errors', toastPosition: 'bottom-right', chartType: 'line', defaultOrderType: 'limit', defaultTimeframe: '4h', chartVolume: false, networkKey: 'arc', timeFormat: '12h', timeZone: 'utc', privacy: true, shortcuts: false })
+    expect(s).toMatchObject({ themePref: 'system', accent: 'peach', scale: 'lg', motion: 'reduced', density: 'compact', startPage: 'trade', toasts: 'errors', toastPosition: 'bottom-right', chartType: 'line', defaultOrderType: 'limit', defaultTimeframe: '4h', chartVolume: false, networkKey: 'arc', timeFormat: '12h', timeZone: 'utc', privacy: true, shortcuts: false })
     expect(s.page).toBe('trade')
+  })
+
+  test('hostile or empty input never throws and never escapes the allowed values', () => {
+    for (const raw of [null, undefined, 5, 'x', [], [1, 2], { timeZone: 'Mars/Base', timeFormat: 7, privacy: 'true', shortcuts: 0, slippageBps: -5, expiryDays: 1e99 }, JSON.parse('{"__proto__":{"accent":"x"},"accent":{"a":1}}')]) {
+      const s = sanitizeSettings(raw)
+      expect(s.accent).toBe('lavender')
+      expect(['local', 'utc']).toContain(s.timeZone)
+      expect(['24h', '12h']).toContain(s.timeFormat)
+      expect(s.privacy).toBe(false)
+      expect(s.slippageBps).toBeGreaterThanOrEqual(1)
+      expect(s.slippageBps).toBeLessThanOrEqual(1000)
+      expect(s.expiryDays).toBeGreaterThanOrEqual(1)
+      expect(s.expiryDays).toBeLessThanOrEqual(365)
+    }
   })
 })
 
@@ -197,6 +215,7 @@ describe('page links', () => {
     expect(pageFromHash('#agent')).toBe('agent')
     expect(pageFromHash('#/trade?x=1')).toBe('trade')
     expect(pageFromHash('#/home')).toBe('home')
+    expect(pageFromHash('#/settings')).toBe('settings')
     expect(pageFromHash('#/lending')).toBeNull()
     expect(pageFromHash('')).toBeNull()
     expect(pageFromHash('#/../../etc')).toBeNull()

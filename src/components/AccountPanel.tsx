@@ -18,8 +18,8 @@ export function AccountPanel({ network }: { network: NetworkConfig }) {
   return (
     <Panel className="p-4">
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="font-display text-sm font-semibold">Account</h3>
-        <button onClick={() => setPage('dashboard')} className="text-xs text-accent hover:underline">
+        <h3 className="text-lg">Account</h3>
+        <button onClick={() => setPage('dashboard')} className="min-h-[32px] text-xs font-bold underline underline-offset-2 hover:bg-accent hover:text-accent-ink">
           Dashboard
         </button>
       </div>
@@ -29,7 +29,7 @@ export function AccountPanel({ network }: { network: NetworkConfig }) {
           <p className="text-xs text-mute">Connect a wallet to see your balances and trade.</p>
           <ConnectKitButton.Custom>
             {({ show }) => (
-              <button onClick={show} className="min-h-[38px] w-full rounded-lg bg-accent text-sm font-semibold text-accent-ink hover:opacity-90">
+              <button onClick={show} className="press min-h-[44px] w-full border border-line bg-accent text-sm font-bold text-accent-ink shadow-hard-sm">
                 Connect wallet
               </button>
             )}
@@ -39,9 +39,9 @@ export function AccountPanel({ network }: { network: NetworkConfig }) {
         <Skeleton className="h-24" />
       ) : (
         <>
-          <div className="num font-display text-xl font-semibold">{usd(a.total)}</div>
+          <div className="num sensitive text-2xl font-semibold">{usd(a.total)}</div>
           <div className="mb-2 text-[11px] text-mute">Account value{a.unpriced ? ` (${a.unpriced} unpriced token left out)` : ''}</div>
-          <div className="divide-y divide-line">
+          <div className="sensitive divide-y divide-line/40">
             <Row label="Available" value={usd(a.available)} />
             <Row label="In orders" value={usd(a.locked)} />
             <Row label="Realized PnL" value={usd(a.realized)} tone={a.realized > 0n ? 'up' : a.realized < 0n ? 'down' : undefined} />
@@ -62,7 +62,7 @@ export function AccountPanel({ network }: { network: NetworkConfig }) {
       )}
 
       {network.isTestnet && (
-        <a href="https://faucet.circle.com" target="_blank" rel="noopener noreferrer" className="mt-3 flex items-center justify-center gap-1.5 rounded-lg border border-line py-2 text-xs text-mute hover:text-ink">
+        <a href="https://faucet.circle.com" target="_blank" rel="noopener noreferrer" className="press mt-3 flex min-h-[44px] items-center justify-center gap-1.5 border border-line bg-panel text-xs font-bold shadow-hard-sm hover:bg-raised">
           Get test USDC <ExternalLink className="h-3 w-3" />
         </a>
       )}

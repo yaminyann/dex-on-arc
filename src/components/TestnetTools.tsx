@@ -71,7 +71,7 @@ export function TestnetTools({ network, base }: { network: NetworkConfig; base: 
         className="flex w-full items-center gap-2 px-4 py-3 text-left"
       >
         <FlaskConical className="h-4 w-4 text-warn" />
-        <span className="font-display text-sm font-semibold">Testnet tools</span>
+        <span className="text-lg">Testnet tools</span>
         <span className="num ml-auto text-xs text-mute">{current !== null ? `${base.symbol} $${current.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : ''}</span>
         <ChevronDown className={`h-4 w-4 text-mute transition ${open ? 'rotate-180' : ''}`} />
       </button>
@@ -92,7 +92,7 @@ export function TestnetTools({ network, base }: { network: NetworkConfig; base: 
             onChange={(e) => setPrice(e.target.value.replace(/[^0-9.]/g, ''))}
             placeholder="New price in USD"
             aria-label="New test price in USD"
-            className="num min-h-[40px] min-w-0 flex-1 rounded-lg border border-line bg-raised px-3 text-sm outline-none focus:border-accent"
+            className="num min-h-[44px] min-w-0 flex-1 border border-line bg-panel px-3 text-sm placeholder:text-mute focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           />
           <Button variant="ghost" className="min-h-[40px] border border-line" disabled={!address || tx.busy || !(Number(price) > 0)} onClick={() => setTo(Number(price))}>
             Set
