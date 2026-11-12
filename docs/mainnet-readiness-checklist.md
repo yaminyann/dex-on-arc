@@ -36,7 +36,7 @@ Legend: **Done** = verified by an automated or live test (evidence given). **Par
 | 2.4 | KyberSwap router address and sell amount validated; unexpected router refused | Done | Unit tests with live-shaped fixtures; router has code on Arc mainnet |
 | 2.5 | 0x AllowanceHolder address and 0x API behaviour on Arc | **Partial** | Address has code on Arc mainnet; never exercised with a real 0x key |
 | 2.6 | Router(s) allowlisted on the mainnet contract through the timelock | **Owner** | Testnet rehearsal done with a second test router |
-| 2.7 | Gateway degrades gracefully (timeouts, breaker, budgets, fallback) | Partial | Unit tests; the keeper recorded provider fallbacks live. The explicit disable-router-then-failover scenario did not finish live |
+| 2.7 | Gateway degrades gracefully (timeouts, breaker, budgets, fallback) | Partial | Unit tests; the keeper failed over from an empty router A to router B live (receipts checked). The explicit disable-router-then-failover scenario did not finish live |
 | 2.8 | `GATEWAY_SIMULATE` eth_call check demotes broken quotes | Partial | Unit tests; skipped when allowance is insufficient |
 | 2.9 | Secrets stay out of logs and alerts | Done | `redactSecrets` tests; verified live that an RPC URL in an error is redacted |
 
@@ -44,7 +44,7 @@ Legend: **Done** = verified by an automated or live test (evidence given). **Par
 
 | # | Item | Status | Evidence / gap |
 | --- | --- | --- | --- |
-| 3.1 | Executes DCA, stop-loss, take-profit, trailing, OCO, stop-limit, expiry refunds | Partial | Live on v2: DCA, stop-loss, take-profit, expiry refund; trailing and OCO passed in an earlier v2 run. Stop-limit fill and OCO re-run after the keeper fixes are pending (need testnet USDC). All eleven passed on the v1 harness |
+| 3.1 | Executes DCA, stop-loss, take-profit, trailing, OCO, stop-limit, expiry refunds | Done except trailing re-run | Live on v2: DCA, stop-loss, take-profit, expiry refund; trailing and OCO passed in an earlier v2 run. OCO and stop-limit fill re-verified on a clean state after the keeper fixes. Trailing stop re-run on v2 after the fixes is pending. All eleven passed on the v1 harness |
 | 3.2 | Batches ready orders into one `executeMany` | Done (2 orders per batch) | Three keeper `executeMany` transactions, one with a skipped item (`BatchItemFailed`). A batch of three completing fully is pending |
 | 3.3 | Profit gate, gas floor, explicit nonces, standby failover | Partial | Unit tests and live runs; mainnet gas economics unmeasured |
 | 3.4 | Keeper key never shared with another sender | Done | Found by the live run: a shared key raced the explicit nonces. The testnet keeper now has its own key |

@@ -81,7 +81,13 @@ async function expectRevert(label: string, from: typeof deployer, address: Addre
 
 const o = (from: typeof deployer, fn: string, args: unknown[], match: RegExp, label = fn) => expectRevert(label, from, ORDERS, ordersAbi as unknown as Abi, fn, args, match)
 
+const only = (process.env.E2E_ONLY ?? '').split('|').map((x) => x.trim()).filter(Boolean)
+
 async function scenario(name: string, fn: () => Promise<string>) {
+  if (only.length && !only.some((x) => name.includes(x))) {
+    console.log(`SKIP ${name}`)
+    return
+  }
   const started = Date.now()
   sent.length = 0
   let ok = true
@@ -128,7 +134,7 @@ async function main() {
   const owner = await pub.readContract({ address: ORDERS, abi: ordersAbi, functionName: 'owner' })
   if (owner.toLowerCase() !== deployer.address.toLowerCase()) throw new Error('the deployer key is not the owner of this order contract')
   for (const to of [trader.address, outsider.address]) {
-    const hash = await wallet(deployer).sendTransaction({ to, value: parseUnits(to === trader.address ? (process.env.E2E_FUND ?? '0.3') : '0.05', 18) })
+    const hash = await wallet(deployer).sendTransaction({ to, value: parseUnits(to === trader.address ? (process.env.E2E_FUND ?? '0.3') : (process.env.E2E_OUTSIDER_FUND ?? '0.05'), 18) })
     await pub.waitForTransactionReceipt({ hash })
   }
   const tokenCfg = await pub.readContract({ address: ORDERS, abi: ordersAbi, functionName: 'tokenConfigs', args: [TORC] })

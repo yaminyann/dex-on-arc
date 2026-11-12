@@ -1,0 +1,77 @@
+{
+  "label": "rerun2",
+  "chainId": 5042002,
+  "orders": "0xa83efe842010dbd470dfe7cc210d61c4edd908aa",
+  "trader": "0x7116C809e7aF70c212250bC81E2D8c0d2CB56531",
+  "ranAt": "2026-11-12T01:15:26.585Z",
+  "passed": 2,
+  "total": 2,
+  "results": [
+    {
+      "name": "OCO: take-profit leg fires once and the order cannot run again",
+      "ok": true,
+      "detail": "executed once; further execution reports \"not open\"",
+      "seconds": 12,
+      "txs": [
+        {
+          "fn": "createOrder",
+          "hash": "0x8c2b0624f7ff293e4e086a914b5efd619254d5916f767bc89493f2747debedac"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0xc384bdeeb3878c9ec04c72c5fd0aadec66a96181d5343a61a82ae672f41fc7d8"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0xa612c4c4e0373fd53e59a43062173ca2c2b896c073a1454572c7d296a9ed626d"
+        }
+      ],
+      "contractEvents": [
+        {
+          "event": "OrderExecuted",
+          "id": "53",
+          "txHash": "0x5c67a9dff71e2cb2c159ecbb7de07750c8b2e304e8649ad40d219fb04f6bf800",
+          "block": "71967706"
+        }
+      ]
+    },
+    {
+      "name": "stop-limit: activation persists, no fill below the limit, fills after a rebound",
+      "ok": true,
+      "detail": "activated, held unfilled below limit, filled at 69.13623188405796 after rebound",
+      "seconds": 29,
+      "txs": [
+        {
+          "fn": "createOrder",
+          "hash": "0x6ff3b9f3e29421f1919a65bfb46c87da70533c48bf82f385ae7cd8bb9737e31d"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0xb1d549a763ea4e1f3e7ee19f1e49f414b7a557d93484505afa52ff17be9be3fc"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0x26b88b2bb3537c2dc8c806c2f122e66820e4f32f376d8b25dbaf5a4ae04795ee"
+        },
+        {
+          "fn": "setPrice",
+          "hash": "0xa8e78f56aa133c94aac58c67c14188bbf1a7776ebdfe144c85bae614b4bc6682"
+        }
+      ],
+      "contractEvents": [
+        {
+          "event": "StopActivated",
+          "id": "54",
+          "txHash": "0xe452e5899786b40fc7ce5a2c8a417db291aa7051a93641696c2730c77e8c8e34",
+          "block": "71967728"
+        },
+        {
+          "event": "OrderExecuted",
+          "id": "54",
+          "txHash": "0x1f891b69b1f50ac1ef8a87356423d2af527d13dc88ccbb37c5607b5b6805bb6b",
+          "block": "71967767"
+        }
+      ]
+    }
+  ]
+}
