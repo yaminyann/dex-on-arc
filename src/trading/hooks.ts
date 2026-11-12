@@ -5,6 +5,7 @@ import { erc20Abi, zeroAddress, type Address, type PublicClient } from 'viem'
 import { ordersAbi } from './ordersAbi'
 import type { NetworkConfig, TokenInfo } from './networks'
 import { fetchHealth } from './aggregator'
+import { useTokenList } from './tokens'
 import type { DcaView, OrderView } from './types'
 import { Status } from './types'
 
@@ -63,19 +64,22 @@ export function useOraclePrices(network: NetworkConfig, tokens: TokenInfo[]) {
 
 export function useBalances(network: NetworkConfig, owner: Address | undefined) {
   const client = usePublicClient({ chainId: network.chainId })
-  const tokens = [network.quote, ...network.bases]
+  // Every token the terminal lists, so a held token shows up whether or not it is tradable here.
+  const listed = useTokenList(network).tokens
+  const tokens = [network.quote, ...network.bases, ...listed.filter((t) => !network.bases.some((b) => b.address === t.address))]
   return useQuery({
-    queryKey: ['balances', network.key, owner],
+    queryKey: ['balances', network.key, owner, tokens.length],
     enabled: Boolean(client && owner),
     refetchInterval: 12_000,
     queryFn: async () => {
       if (!client || !owner) return {}
-      // One Multicall3 request for every token instead of one RPC call per token.
+      // One Multicall3 request for every token instead of one RPC call per token. A token whose
+      // balanceOf reverts counts as zero instead of hiding every other balance.
       const res = await client.multicall({
         contracts: tokens.map((t) => ({ address: t.address, abi: erc20Abi, functionName: 'balanceOf' as const, args: [owner] as const })),
-        allowFailure: false,
+        allowFailure: true,
       })
-      return Object.fromEntries(tokens.map((t, i) => [t.address.toLowerCase(), res[i]]))
+      return Object.fromEntries(tokens.map((t, i) => [t.address.toLowerCase(), res[i].status === 'success' ? res[i].result : 0n]))
     },
   })
 }

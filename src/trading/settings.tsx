@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import type { NetworkKey } from './networks'
 
 export type Theme = 'dark' | 'light'
-export type Page = 'trade' | 'portfolio'
+export type Page = 'trade' | 'portfolio' | 'admin'
 
 interface Settings {
   theme: Theme
@@ -21,7 +21,7 @@ interface Ctx extends Settings {
 }
 
 const KEY = 'arc-terminal-settings-v1'
-const DEFAULTS: Settings = { theme: 'dark', slippageBps: 50, expiryDays: 7, networkKey: 'arc-testnet', page: 'trade' }
+const DEFAULTS: Settings = { theme: 'dark', slippageBps: 50, expiryDays: 7, networkKey: (import.meta.env.VITE_DEFAULT_NETWORK === 'arc' ? 'arc' : 'arc-testnet'), page: 'trade' }
 
 function load(): Settings {
   try {

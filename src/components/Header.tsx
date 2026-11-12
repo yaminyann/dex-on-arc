@@ -6,6 +6,7 @@ import { clsx } from 'clsx'
 import { NETWORK_LIST, type NetworkConfig } from '@/trading/networks'
 import { useSettings, type Page } from '@/trading/settings'
 import { useBalances } from '@/trading/hooks'
+import { useContractState } from '@/trading/admin'
 import { formatToken } from '@/trading/math'
 import { Skeleton } from './ui'
 import { SettingsDialog } from './SettingsDialog'
@@ -14,6 +15,7 @@ const PAGES: { id: Page; label: string }[] = [
   { id: 'trade', label: 'Trade' },
   { id: 'portfolio', label: 'Portfolio' },
 ]
+const ADMIN_PAGE = { id: 'admin' as Page, label: 'Admin' }
 
 export function Header({ network }: { network: NetworkConfig }) {
   const s = useSettings()
@@ -23,6 +25,11 @@ export function Header({ network }: { network: NetworkConfig }) {
   const balances = useBalances(network, address)
   const usdc = balances.data?.[network.quote.address.toLowerCase()]
   const wrongChain = isConnected && chainId !== network.chainId
+  // Offered only to the contract owner (or the wallet it offered ownership to). The contract enforces access either way.
+  const contract = useContractState(network).data
+  const me = address?.toLowerCase()
+  const isAdmin = Boolean(me && contract && (me === contract.owner.toLowerCase() || me === contract.pendingOwner?.toLowerCase()))
+  const pages = isAdmin ? [...PAGES, ADMIN_PAGE] : PAGES
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-canvas/85 backdrop-blur">
@@ -35,7 +42,7 @@ export function Header({ network }: { network: NetworkConfig }) {
         </div>
 
         <nav className="order-last flex w-full gap-1 sm:order-none sm:w-auto" aria-label="Pages">
-          {PAGES.map((p) => (
+          {pages.map((p) => (
             <button
               key={p.id}
               onClick={() => s.setPage(p.id)}

@@ -12,6 +12,7 @@ Vite exposes only variables that start with `VITE_`. These are public by design.
 | `VITE_ORDERS_ADDRESS_ARC_MAINNET` | For orders on mainnet | Contract you deployed on Arc mainnet |
 | `VITE_ORDERS_DEPLOY_TX_ARC_TESTNET` | Optional | Deployment transaction hash. Lets history reads start at the deployment block instead of a bounded lookback |
 | `VITE_ORDERS_DEPLOY_TX_ARC_MAINNET` | Optional | Same, for mainnet |
+| `VITE_DEFAULT_NETWORK` | Optional (`arc-testnet`) | `arc` or `arc-testnet`. The network a first-time visitor opens on. A visitor's own choice is remembered and wins |
 
 Changing a `VITE_` variable needs a dev-server restart.
 
@@ -33,6 +34,8 @@ Changing a `VITE_` variable needs a dev-server restart.
 | `GATEWAY_SIMULATE` | on | Set `false` to skip the `eth_call` check of firm quotes (failing quotes are demoted, never trusted) |
 | `KYBER_CLIENT_ID` | `arc-terminal` | Client id header sent to KyberSwap |
 | `KYBER_ROUTER_ALLOWLIST` | KyberSwap router | Comma-separated router addresses the backend accepts from KyberSwap. Anything else is refused |
+| `PLATFORM_FEE_BPS` | `0` | Fee on browser market swaps in basis points of the sell amount (0 = off, max 100). Paid by the aggregator to `PLATFORM_FEE_RECIPIENT` inside the swap. Not charged on orders, DCA, keepers or testnet. See [admin-guide.md](admin-guide.md) |
+| `PLATFORM_FEE_RECIPIENT` | none | Address that receives the swap fee. Required when `PLATFORM_FEE_BPS` > 0. An invalid fee setting turns the fee off and logs a warning |
 | `ALERT_WEBHOOK_URL` | none | Receives `{"text": "..."}` for keeper and provider alerts (deduplicated, secrets redacted) |
 | `VITE_SWAP_TARGETS_ARC` | none | Frontend. Extra reviewed swap contracts (comma-separated) allowed for market swaps on Arc mainnet, in addition to the 0x AllowanceHolder |
 

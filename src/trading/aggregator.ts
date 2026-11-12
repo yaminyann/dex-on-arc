@@ -36,6 +36,8 @@ export interface SwapQuote {
   /** Spender that must hold an ERC-20 allowance for the sell token, when not already approved. */
   allowanceSpender: Address | null
   allowanceActual: bigint | null
+  /** Platform fee already taken out of the sell amount, when the backend charges one. */
+  platformFee?: { bps: number; amount: bigint }
   /** Present for firm quotes only. */
   transaction?: { to: Address; data: Hex; value: bigint; gas: bigint | null }
 }
@@ -68,6 +70,7 @@ interface RawQuote {
   route?: RouteFill[]
   totalNetworkFee?: string | null
   issues?: { allowance?: { actual: string; spender: string } | null }
+  platformFee?: { bps: number; amount: string } | null
   transaction?: { to: string; data: string; value: string; gas?: string | null }
   error?: { code: string; message: string }
 }
@@ -105,6 +108,7 @@ export function parseRawQuote(raw: RawQuote): SwapQuote | null {
     networkFeeNative: raw.totalNetworkFee ? BigInt(raw.totalNetworkFee) : null,
     allowanceSpender: (raw.issues?.allowance?.spender as Address | undefined) ?? null,
     allowanceActual: raw.issues?.allowance ? BigInt(raw.issues.allowance.actual) : null,
+    platformFee: raw.platformFee ? { bps: raw.platformFee.bps, amount: BigInt(raw.platformFee.amount) } : undefined,
     transaction: raw.transaction
       ? {
           to: raw.transaction.to as Address,
@@ -228,6 +232,10 @@ export interface BackendHealth {
   gateway?: { configured: boolean; providers: { id: string; configured: boolean; breaker: string; consecutiveFailures: number }[] }
   keeper: { enabled: boolean; running: boolean; network: string; keeperAddress: string | null; lastTick: number | null; lastError: string | null; executed: number; notes: string[] }
   automationProviders: { id: string; name: string; state: string; summary: string; evidence: string }[]
+  /** Fee charged on browser market swaps. `recipient` and `platformFeeProblem` are sent to operators only. */
+  platformFee?: { bps: number; recipient?: string } | null
+  platformFeeProblem?: string
+  indexer?: { enabled: boolean; running: boolean; lagBlocks: number | null; lastError: string | null }
 }
 
 export async function fetchHealth(): Promise<BackendHealth> {

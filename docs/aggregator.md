@@ -58,6 +58,14 @@ A `null` result means no liquidity. Errors are thrown as `AggregatorError` with 
 4. Allowlist the provider's swap target on the contract (queue, wait for the delay, apply). The keeper checks `swapTargets(target)` before sending.
 5. Add unit tests for response parsing like the 0x tests in `tests/trading.test.ts`.
 
+## Platform fee
+
+When `PLATFORM_FEE_BPS` and `PLATFORM_FEE_RECIPIENT` are set the backend adds the fee to browser quotes. KyberSwap: `feeAmount`, `chargeFeeBy=currency_in`, `isInBps=true`, `feeReceiver` (verified live on Arc mainnet). 0x: `swapFeeBps`, `swapFeeRecipient`, `swapFeeToken` (implemented from 0x's documented parameters, not yet run against a live key). The router pays the recipient in the same transaction, the displayed quote is net of the fee, and keepers never pay it. Full details in [admin-guide.md](admin-guide.md).
+
+## Token list
+
+The swap picker loads tokens from `GET /tokens` (KyberSwap's registry, filtered and cached by the backend; about 60 whitelisted tokens on Arc mainnet). Market swaps work for any of them. Orders and DCA additionally need an oracle feed for the token on the order contract (the form says so when there is none).
+
 ## Fees
 
 0x can charge integrator fees if you configure them; this project does not. The keeper fee (up to 0.10% of output) is separate and enforced by the contract.

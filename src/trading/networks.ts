@@ -16,6 +16,8 @@ export interface TokenInfo {
   isTest?: boolean
   /** Public test price feed (testnet harness only). */
   testFeed?: Address
+  /** Token logo from the aggregator's registry (https only). */
+  logoURI?: string
   /** Amount one call to the token's faucet hands out, in whole tokens. */
   faucetAmount?: string
 }

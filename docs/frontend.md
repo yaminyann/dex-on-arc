@@ -13,6 +13,10 @@ Navigation, network selector (Testnet / Mainnet), wallet button, USDC balance, t
 
 On small screens the trade panel sits directly under the pair header and above the chart; from the `lg` breakpoint it is a right-hand column. A network with no tokens or contract (mainnet until it is configured) shows a single "Trading is not enabled" card instead of disabled panels. Only tokens with an oracle feed are offered for trading (`tradableBases`): on testnet that is tBTC, tETH and tSOL; EURC, cirBTC and WETH only appear in the portfolio when held.
 
+Token picker: on mainnet it lists every token the aggregator can route (about 60, loaded from `/api/tokens`, searchable by name, symbol or pasted address, with the contract address shown), so market swaps work for all of them. Tokens without a Coinbase market show the aggregator's price for a 10 USDC trade instead of a chart. Orders and DCA need an oracle feed on the contract and say so when a token has none.
+
+**Admin** (`Admin`): a tab visible only to the contract owner. Contract controls (pause, minimum order, ownership transfer), fees, tokens/routers/timelocked changes and backend status. See [admin-guide.md](admin-guide.md).
+
 Removed on purpose: the Prompt Station placeholder, the swap depth panel, the automation provider list and the EMA 50 chart toggle. The keeper status is one line under non-market order forms.
 
 ## Trade panel

@@ -19,6 +19,20 @@ Provider and keeper status for the UI.
 }
 ```
 
+`/health` also reports `platformFee` (`{ "bps": 30 }` or `null`). Operators additionally get `platformFee.recipient` and `platformFeeProblem` (why a configured fee was turned off).
+
+### `GET /tokens?chainId=5042`
+
+The tradable token list for the swap picker, from KyberSwap's public registry (keyless), cached 10 minutes with the last good list served if the registry is down. Only whitelisted tokens that are not flagged honeypot or fee-on-transfer are returned; text is sanitised and logos must be https. Chains without a registry (testnet) return `{ "tokens": [] }`. Being listed means the aggregator can route the token, not that it is safe.
+
+```json
+{ "tokens": [ { "address": "0xbef5...", "symbol": "EURC", "name": "EURC", "decimals": 6, "logoURI": "https://..." } ] }
+```
+
+### `GET /admin-events?limit=200`
+
+Owner actions from the indexer (`ConfigQueued`, `ConfigCancelled`, `TokenConfigured`, `SwapTargetSet`, `KeeperFeeSet`, `MinOrderQuoteSet`, `Paused`, `Unpaused`, ownership events), newest first. Public chain data; the Admin page rebuilds the token, router and pending-change lists from it and confirms them against the chain. `503 INDEXER_DISABLED` when the indexer is off.
+
 ### `GET /metrics`
 
 Counters for operators.
@@ -36,6 +50,8 @@ Counters for operators.
 `/metrics` exposes no secrets. Do not put it on the public internet unauthenticated if you consider operational counters sensitive.
 
 ### `GET /price` and `GET /quote`
+
+When `PLATFORM_FEE_BPS` is set, browser requests carry the fee: the quote's `buyAmount` is already net of it and the response includes `platformFee: { bps, amount }` (amount in sell-token base units).
 
 Indicative price (`/price`) and firm quote with a transaction (`/quote`) from 0x AllowanceHolder.
 

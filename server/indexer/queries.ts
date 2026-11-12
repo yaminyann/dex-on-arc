@@ -108,3 +108,24 @@ export async function swapCount(db: Db, chainId: number): Promise<number> {
   const rows = (await db`select count(*) as n from swaps where chain_id = ${chainId}`) as { n: number | string }[]
   return Number(rows[0]?.n ?? 0)
 }
+
+/** Owner actions that change how the contract behaves. Public chain data, newest first. */
+const ADMIN_EVENT_NAMES = ['ConfigQueued', 'ConfigCancelled', 'TokenConfigured', 'SwapTargetSet', 'KeeperFeeSet', 'MinOrderQuoteSet', 'Paused', 'Unpaused', 'OwnershipTransferStarted', 'OwnershipTransferred'] as const
+
+export async function adminEventsFor(db: Db, q: { chainId: number; limit: number }): Promise<HistoryRow[]> {
+  const rows = (await db`select * from events where chain_id = ${q.chainId} and (name = 'ConfigQueued' or name = 'ConfigCancelled' or name = 'TokenConfigured' or name = 'SwapTargetSet' or name = 'KeeperFeeSet' or name = 'MinOrderQuoteSet' or name = 'Paused' or name = 'Unpaused' or name = 'OwnershipTransferStarted' or name = 'OwnershipTransferred') order by block_number desc, log_index desc limit ${q.limit}`) as EventRow[]
+  return rows.map((r) => ({
+    id: r.id,
+    chainId: r.chain_id,
+    blockNumber: r.block_number,
+    blockTime: r.block_time,
+    txHash: r.tx_hash,
+    logIndex: r.log_index,
+    name: r.name,
+    owner: r.owner,
+    itemId: r.item_id,
+    args: JSON.parse(r.args) as unknown,
+  }))
+}
+
+export { ADMIN_EVENT_NAMES }

@@ -2,6 +2,7 @@
  * Backend for the trading terminal.
  *  - GET /health   provider status. Public view is redacted; operators (see ADMIN_TOKEN) get full detail
  *  - GET /metrics  counters for operators only
+ *  - GET /tokens   tradable token list for a chain (KyberSwap registry, filtered and cached)
  *  - GET /price    indicative 0x price (no transaction data), cached briefly and coalesced
  *  - GET /quote    firm 0x quote including the transaction to sign (never cached)
  * Run with `bun run server`. The Vite dev server proxies /api to this process.
@@ -12,6 +13,7 @@
  *   ALLOWED_ORIGINS     comma-separated browser origins allowed to call /price and /quote
  *   ADMIN_TOKEN         bearer token for /metrics and detailed /health. Unset: loopback-only, direct
  *   UPSTREAM_BUDGET_PER_MIN  global cap on calls to 0x from this process (default 600)
+ *   PLATFORM_FEE_BPS / PLATFORM_FEE_RECIPIENT  fee on browser market swaps, paid by the aggregator (max 100 bps)
  */
 import { isApiError, parseQuoteRequest, ZEROEX_SUPPORTED_CHAINS } from './zerox'
 import { gateway, readAllowance } from './gateway/instance'
@@ -23,9 +25,11 @@ import { listProviders } from './automation/providers'
 import { metrics, RateLimiter, TtlCache } from './scale'
 import { isOperator, originAllowed, parseList, resolveClientIp } from './security'
 import { indexerDb, indexerStatus, startIndexer } from './indexer/runtime'
-import { clampLimit, eventCounts, historyFor, swapCount, swapsFor, validOwner } from './indexer/queries'
+import { adminEventsFor, clampLimit, eventCounts, historyFor, swapCount, swapsFor, validOwner } from './indexer/queries'
 import { recordSwap } from './indexer/swaps'
 import { swapTargetsFor } from './gateway/targets'
+import { createTokenList } from './gateway/tokens'
+import { parsePlatformFee } from './gateway/fee'
 
 const port = Number(process.env.API_PORT ?? 3001)
 const PRICE_TTL_MS = Number(process.env.PRICE_CACHE_TTL_MS ?? 4000)
@@ -41,6 +45,13 @@ const limits = {
   other: new RateLimiter(Math.round(240 * scale), 60_000),
   swaps: new RateLimiter(Math.round(30 * scale), 60_000),
 }
+
+const tokenList = createTokenList()
+const platform = parsePlatformFee()
+if (platform.problem) console.warn(`[api] ${platform.problem}`)
+if (platform.fee) console.log(`[api] platform fee ${platform.fee.bps} bps to ${platform.fee.recipient} on browser market swaps`)
+/** Adds the platform fee to a browser swap request. Keepers call the gateway directly and never get it. */
+const withFee = <T extends object>(req: T) => (platform.fee ? { ...req, fee: platform.fee } : req)
 
 const priceCache = new TtlCache<{ status: number; body: unknown }>(PRICE_TTL_MS, 1000)
 // Per-wallet allowance view of a shared price, cached just as briefly.
@@ -86,6 +97,8 @@ const server = Bun.serve({
         keeper: view,
         indexer: operator ? indexerStatus() : { ...indexerStatus(), lastError: indexerStatus().lastError ? 'Indexer reported an error. Details are restricted to operators.' : null },
         automationProviders: listProviders(),
+        platformFee: platform.fee ? { bps: platform.fee.bps, ...(operator ? { recipient: platform.fee.recipient } : {}) } : null,
+        ...(operator && platform.problem ? { platformFeeProblem: platform.problem } : {}),
       })
     }
 
@@ -104,7 +117,18 @@ const server = Bun.serve({
       })
     }
 
-    if (url.pathname === '/history' || url.pathname === '/swaps' || url.pathname === '/stats') {
+    if (url.pathname === '/tokens') {
+      const chainId = Number(url.searchParams.get('chainId'))
+      if (!Number.isInteger(chainId) || !tokenList.supports(chainId)) return json({ tokens: [] })
+      try {
+        return json({ tokens: await tokenList.get(chainId) }, 200, { 'cache-control': 'public, max-age=300' })
+      } catch {
+        metrics.http.upstreamErrors += 1
+        return json({ error: { code: 'TOKEN_LIST_UNAVAILABLE', message: 'The token list is temporarily unavailable.' } }, 502)
+      }
+    }
+
+    if (url.pathname === '/history' || url.pathname === '/swaps' || url.pathname === '/stats' || url.pathname === '/admin-events') {
       if (!originAllowed(req.headers.get('origin'), req.headers.get('referer'), allowedOrigins)) {
         return json({ error: { code: 'ORIGIN_NOT_ALLOWED', message: 'This origin may not use the history service.' } }, 403)
       }
@@ -126,6 +150,10 @@ const server = Bun.serve({
         return json({ recorded: true }, 201)
       }
 
+      if (url.pathname === '/admin-events') {
+        // Owner actions are public chain data; the admin page uses them to list tokens, routers and pending changes.
+        return json({ events: await adminEventsFor(idx.db, { chainId: idx.chainId, limit: clampLimit(url.searchParams.get('limit'), 200, 500) }) })
+      }
       if (url.pathname === '/stats') {
         return json({ chainId: idx.chainId, indexer: { cursor: indexerStatus().cursor, head: indexerStatus().head, lagBlocks: indexerStatus().lagBlocks }, events: await eventCounts(idx.db, idx.chainId), swaps: await swapCount(idx.db, idx.chainId) })
       }
@@ -154,7 +182,7 @@ const server = Bun.serve({
           let fresh = false
           const shared = await priceCache.get(cacheKey, async () => {
             fresh = true
-            return gateway.best('price', { ...parsed, taker: NEUTRAL_TAKER })
+            return gateway.best('price', withFee({ ...parsed, taker: NEUTRAL_TAKER }))
           })
           if (fresh) metrics.http.cacheMisses += 1
           else metrics.http.cacheHits += 1
@@ -162,7 +190,7 @@ const server = Bun.serve({
           const out = await allowanceCache.get(allowanceKey + ':' + cacheKey, () => withTakerAllowance(shared, parsed, readAllowance))
           return json(out.body, out.status, { 'x-cache': fresh ? 'miss' : 'hit' })
         }
-        const out = await gateway.best('quote', parsed)
+        const out = await gateway.best('quote', withFee(parsed))
         return json(out.body, out.status)
       } catch {
         metrics.http.upstreamErrors += 1

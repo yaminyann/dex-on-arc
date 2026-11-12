@@ -1,3 +1,4 @@
+import { feeAmount } from './fee'
 import { fetchZeroEx, zeroExConfigured, ZEROEX_SUPPORTED_CHAINS } from '../zerox'
 import type { GatewayQuote, GatewayRequest, ProviderResult, QuoteKind, QuoteProvider, RouteFill } from './types'
 
@@ -45,6 +46,8 @@ export const zeroExProvider: QuoteProvider = {
   supports: (chainId) => ZEROEX_SUPPORTED_CHAINS.has(chainId),
   async fetch(kind: QuoteKind, req: GatewayRequest, signal: AbortSignal): Promise<ProviderResult> {
     const out = await fetchZeroEx(kind, { ...req, chainId: req.chainId }, signal)
-    return normalizeZeroEx(out.status, out.body)
+    const res = normalizeZeroEx(out.status, out.body)
+    if (res.kind === 'quote' && req.fee) res.quote.platformFee = { bps: req.fee.bps, recipient: req.fee.recipient, amount: feeAmount(res.quote.sellAmount, req.fee.bps) }
+    return res
   },
 }

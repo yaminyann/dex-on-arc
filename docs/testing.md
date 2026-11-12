@@ -35,8 +35,15 @@ What these tests do not cover: behaviour against real Chainlink feeds, the real 
 - Order math matches the contract convention for 6/8/18-decimal tokens, zero-price safety, slippage floors, input parsing, DCA sizing.
 - Positions: average entry, realized/unrealized PnL, partial sells, open orders excluded, unknown decimals skipped.
 - Candles: 4h aggregation, SMA/EMA.
+- Token formatting keeps four significant digits for small amounts and never prints `-0`; positions never go negative and sells without a tracked purchase add no phantom PnL.
+
+`tests/fees-tokens.test.ts` covers the platform fee and the token list: fee settings fail closed (above 100 bps, missing or zero recipient, non-numeric all turn the fee off), fee amount rounding, KyberSwap fee parameters on browser quotes and none on keeper quotes, and the token registry filter (whitelisted only, no honeypot or fee-on-transfer, bad addresses and decimals dropped, text sanitised, http logos dropped, duplicates removed), caching, concurrent-load coalescing, serving the last good list when the registry fails, and no registry call for unsupported chains.
 - 0x adapter: "no liquidity" never becomes a quote, firm quote parsing, server-side request validation (unsupported chains, bad amounts and addresses, slippage cap).
 - Scaling helpers: cache coalescing, expiry and eviction, failures not cached, rate limiter windows, shard coverage (each id in exactly one shard), backoff growth and cap, chunking, bounded concurrency.
+
+## Browser walkthrough (done for every release)
+
+With a funded testnet wallet (a local signing bridge on loopback, testnet key only) every feature is clicked through in the browser: market swap, stop-loss created and filled by the keeper, DCA create/pause/resume/cancel with refund, OCO create/cancel, portfolio, settings, light and dark themes, mobile width, the mainnet token picker with a live KyberSwap quote and the platform fee row (quote only, no mainnet trade), and the Admin page with the owner wallet (pause/resume, queue/cancel a router change). Docker Compose is built and started locally on a spare port and `/healthz` and `/api/health` are checked before a deployment guide is published.
 
 ## Manual and integration checks
 

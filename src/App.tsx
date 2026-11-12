@@ -3,6 +3,7 @@ import { SettingsProvider, useSettings } from '@/trading/settings'
 import { Header } from '@/components/Header'
 import { Terminal } from '@/components/Terminal'
 import { Portfolio } from '@/components/Portfolio'
+import { Admin } from '@/components/Admin'
 
 function Shell() {
   const { networkKey, page } = useSettings()
@@ -11,7 +12,9 @@ function Shell() {
     <div className="min-h-dvh bg-canvas text-ink">
       <Header network={network} />
       <main className="mx-auto max-w-[1500px] px-3 py-4 pb-24 sm:px-5">
-        {page === 'trade' ? <Terminal network={network} /> : <Portfolio network={network} />}
+        {page === 'trade' && <Terminal network={network} />}
+        {page === 'portfolio' && <Portfolio network={network} />}
+        {page === 'admin' && <Admin network={network} />}
       </main>
     </div>
   )

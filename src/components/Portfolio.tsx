@@ -1,5 +1,6 @@
 import { useAccount } from 'wagmi'
 import { tradableBases } from '@/trading/networks'
+import { useTokenList } from '@/trading/tokens'
 import { useBalances, useDcas, useExecutionLogs, useOraclePrices, useOrders } from '@/trading/hooks'
 import type { NetworkConfig } from '@/trading/networks'
 import { averagePrice18, formatPrice18, formatToken, quoteForBase, pctDiff } from '@/trading/math'
@@ -13,12 +14,14 @@ import { lookupToken, Table } from './OrderTables'
 
 export function Portfolio({ network }: { network: NetworkConfig }) {
   const { address } = useAccount()
+  const listed = useTokenList(network).tokens
   const tradable = tradableBases(network).map((t) => t.address.toLowerCase())
-  const tokens = [network.quote, ...network.bases]
+  const tokens = [network.quote, ...network.bases, ...listed.filter((t) => !network.bases.some((b) => b.address === t.address))]
   const balances = useBalances(network, address)
   const orders = useOrders(network, address)
   const dcas = useDcas(network, address)
   const logs = useExecutionLogs(network, address)
+  // Oracle prices only exist for tokens configured on the order contract.
   const prices = useOraclePrices(network, network.bases)
 
   if (!address) {

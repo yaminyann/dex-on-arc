@@ -12,3 +12,6 @@ console.jsonl
 # Local indexer database
 data/
 !.env.example
+
+# Coolify env files (contain secrets)
+deploy/coolify/*.env

@@ -1,0 +1,88 @@
+# Arc Terminal for Coolify (also works with plain `docker compose up -d --build`).
+#
+# Services
+#   web  nginx: the app on port 80 and /api -> api. Give THIS service your domain in Coolify (port 80).
+#   api  Bun: quote gateway, keeper (executes orders), indexer, admin status. Run ONE copy only.
+#
+# Every ${VARIABLE} below is set in Coolify's Environment Variables tab (or in an .env file next to this
+# file for plain docker compose). Secrets (ADMIN_TOKEN, KEEPER_PRIVATE_KEY, API keys) are used by api only.
+# Full guide: docs/deployment-coolify.md
+
+services:
+  api:
+    build:
+      context: .
+      target: api
+    restart: unless-stopped
+    expose:
+      - "3001"
+    environment:
+      API_PORT: "3001"
+      # Operator access to /metrics and detailed /health. Required: the admin page uses it.
+      ADMIN_TOKEN: ${ADMIN_TOKEN:?set ADMIN_TOKEN (long random string)}
+      # nginx + Coolify's proxy sit in front: 2 hops. Add 1 if you also use Cloudflare.
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-2}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      # RPC (comma-separated list = failover in order). Empty uses the public RPC.
+      RPC_URL_Arc: ${RPC_URL_Arc:-}
+      RPC_URL_Arc_Testnet: ${RPC_URL_Arc_Testnet:-}
+      KEEPER_WS_URL: ${KEEPER_WS_URL:-}
+      # Quote providers
+      GATEWAY_PROVIDERS: ${GATEWAY_PROVIDERS:-0x,kyber,test-router,test-router-b}
+      ZEROEX_API_KEY: ${ZEROEX_API_KEY:-}
+      # Platform fee on browser market swaps (0 = off, max 100 = 1%). Needs a recipient address when > 0.
+      PLATFORM_FEE_BPS: ${PLATFORM_FEE_BPS:-0}
+      PLATFORM_FEE_RECIPIENT: ${PLATFORM_FEE_RECIPIENT:-}
+      # Keeper: the wallet that submits order executions and earns the keeper fee.
+      KEEPER_ENABLED: ${KEEPER_ENABLED:-true}
+      KEEPER_NETWORK: ${KEEPER_NETWORK:-arc-testnet}
+      KEEPER_PRIVATE_KEY: ${KEEPER_PRIVATE_KEY:-}
+      KEEPER_INTERVAL_MS: ${KEEPER_INTERVAL_MS:-5000}
+      # Indexer: history, swaps and the admin page's owner log.
+      INDEXER_ENABLED: ${INDEXER_ENABLED:-true}
+      INDEXER_NETWORK: ${INDEXER_NETWORK:-arc-testnet}
+      INDEXER_INTERVAL_MS: ${INDEXER_INTERVAL_MS:-5000}
+      DATABASE_URL: ${DATABASE_URL:-sqlite://./data/indexer.db}
+      # The indexer starts at the contract's deployment block (from the VITE_ORDERS_DEPLOY_TX values below).
+      VITE_ORDERS_ADDRESS_ARC_TESTNET: ${VITE_ORDERS_ADDRESS_ARC_TESTNET:-}
+      VITE_ORDERS_DEPLOY_TX_ARC_TESTNET: ${VITE_ORDERS_DEPLOY_TX_ARC_TESTNET:-}
+      VITE_ORDERS_ADDRESS_ARC_MAINNET: ${VITE_ORDERS_ADDRESS_ARC_MAINNET:-}
+      VITE_ORDERS_DEPLOY_TX_ARC_MAINNET: ${VITE_ORDERS_DEPLOY_TX_ARC_MAINNET:-}
+      ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
+    volumes:
+      - api-data:/app/data
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  web:
+    build:
+      context: .
+      target: web
+      args:
+        VITE_DEFAULT_NETWORK: ${VITE_DEFAULT_NETWORK:-arc-testnet}
+        VITE_ORDERS_ADDRESS_ARC_TESTNET: ${VITE_ORDERS_ADDRESS_ARC_TESTNET:-}
+        VITE_ORDERS_DEPLOY_TX_ARC_TESTNET: ${VITE_ORDERS_DEPLOY_TX_ARC_TESTNET:-}
+        VITE_ORDERS_ADDRESS_ARC_MAINNET: ${VITE_ORDERS_ADDRESS_ARC_MAINNET:-}
+        VITE_ORDERS_DEPLOY_TX_ARC_MAINNET: ${VITE_ORDERS_DEPLOY_TX_ARC_MAINNET:-}
+        VITE_SWAP_TARGETS_ARC: ${VITE_SWAP_TARGETS_ARC:-}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    expose:
+      - "80"
+    environment:
+      # Coolify magic variable: gives this service a generated domain (edit it in the UI to use your own).
+      SERVICE_FQDN_WEB_80: ""
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  api-data:

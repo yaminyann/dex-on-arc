@@ -21,6 +21,8 @@ export interface QuoteRequest {
   sellAmount: string
   taker: string
   slippageBps: number
+  /** Platform fee in bps of the sell token, paid to the recipient by 0x. */
+  fee?: { bps: number; recipient: string }
 }
 
 export interface ApiError {
@@ -114,6 +116,11 @@ export async function fetchZeroEx(kind: QuoteKind, req: QuoteRequest, signal?: A
   url.searchParams.set('sellAmount', req.sellAmount)
   url.searchParams.set('taker', req.taker)
   url.searchParams.set('slippageBps', String(req.slippageBps))
+  if (req.fee) {
+    url.searchParams.set('swapFeeRecipient', req.fee.recipient)
+    url.searchParams.set('swapFeeBps', String(req.fee.bps))
+    url.searchParams.set('swapFeeToken', req.sellToken)
+  }
 
   const res = await fetch(url, { headers: { '0x-api-key': key, '0x-version': 'v2' }, signal })
   const json = (await res.json().catch(() => ({}))) as ZeroExResponse

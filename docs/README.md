@@ -39,6 +39,9 @@ Documentation last verified against the code on 2026-11-11. Facts about third-pa
 | --- | --- |
 | [testing.md](testing.md) | Contract and application test suites and how to run them |
 | [testnet-harness.md](testnet-harness.md) | Test assets, test price feeds and test router for trying every order type on Arc Testnet, plus the live end-to-end test |
+| [deployment-coolify.md](deployment-coolify.md) | Docker Compose deployment on Coolify, env generator and preflight |
+| [admin-guide.md](admin-guide.md) | Fees, owner controls and the Admin page |
+| [guide-bn.md](guide-bn.md) | Full guide in Bengali |
 | [operations.md](operations.md) | Runbook: start, monitor, troubleshoot, rotate keys |
 | [glossary.md](glossary.md) | Terms used across the docs |
 

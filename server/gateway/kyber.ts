@@ -5,6 +5,7 @@
  * Tokens are approved to the router (not to a separate allowance contract), and calldata is built for
  * `sender`/`recipient`, so keepers pass the orders contract as taker and the output lands in the contract.
  */
+import { feeAmount } from './fee'
 import type { GatewayQuote, GatewayRequest, ProviderResult, QuoteKind, QuoteProvider, RouteFill } from './types'
 
 const BASE = 'https://aggregator-api.kyberswap.com'
@@ -92,6 +93,13 @@ export function createKyberProvider(opts: KyberOptions = {}): QuoteProvider {
       const slug = CHAIN_SLUGS[req.chainId]
       if (!slug) return err(400, 'CHAIN_NOT_SUPPORTED', `KyberSwap does not support chain ${req.chainId}.`)
       const qs = new URLSearchParams({ tokenIn: req.sellToken, tokenOut: req.buyToken, amountIn: req.sellAmount, gasInclude: 'true' })
+      // The fee is taken from the sell amount by the router and paid to the recipient in the same transaction.
+      if (req.fee) {
+        qs.set('feeAmount', String(req.fee.bps))
+        qs.set('chargeFeeBy', 'currency_in')
+        qs.set('isInBps', 'true')
+        qs.set('feeReceiver', req.fee.recipient)
+      }
       const route = await call<RouteData>(`/${slug}/api/v1/routes?${qs}`, { signal })
       if (route.json.code === ROUTE_NOT_FOUND) return { kind: 'no_liquidity' }
       if (route.status !== 200 || route.json.code !== 0 || !route.json.data?.routeSummary) {
@@ -148,6 +156,7 @@ export function createKyberProvider(opts: KyberOptions = {}): QuoteProvider {
           networkFeeNative: gasUnits !== null && gasPrice !== null ? gasUnits * gasPrice : null,
           allowance,
           spender: routerAddress,
+          platformFee: req.fee ? { bps: req.fee.bps, recipient: req.fee.recipient, amount: feeAmount(BigInt(req.sellAmount), req.fee.bps) } : undefined,
           transaction,
         },
       }

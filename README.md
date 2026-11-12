@@ -1,12 +1,16 @@
 # Arc Terminal
 
-A non-custodial trading terminal for Arc: market swaps through a DEX aggregator, escrowed conditional orders (limit, stop-loss, take-profit, stop-limit, trailing stop, OCO), recurring buys (DCA), a wallet portfolio, and a placeholder for a future prompt-driven trading station.
+A non-custodial trading terminal for Arc: market swaps through a DEX aggregator, escrowed conditional orders (limit, stop-loss, take-profit, stop-limit, trailing stop, OCO), recurring buys (DCA), a wallet portfolio, a wallet portfolio, and an owner admin page.
 
 Built with [Arc Studio](https://studio.arc.io)
 
 ## Testnet test assets
 
 Arc Testnet has no real oracle or aggregator, so the project ships a clearly labelled test harness: three test tokens (tBTC, tETH, tSOL) with public, settable test price feeds and a test swap router. It lets you try every order type on real contracts. Prices there are not market prices. See [docs/testnet-harness.md](docs/testnet-harness.md).
+
+## Deploying
+
+Docker Compose for Coolify: [docs/deployment-coolify.md](docs/deployment-coolify.md). Fees and owner controls: [docs/admin-guide.md](docs/admin-guide.md). Full Bengali guide: [docs/guide-bn.md](docs/guide-bn.md).
 
 ## Documentation
 

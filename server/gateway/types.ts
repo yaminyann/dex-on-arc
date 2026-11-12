@@ -9,6 +9,8 @@ export interface GatewayRequest {
   /** Address that holds the sell token and receives the output (the user, or the orders contract for keepers). */
   taker: string
   slippageBps: number
+  /** Platform fee for this request. Set by the HTTP API for browser swaps; keepers never set it. */
+  fee?: { bps: number; recipient: string }
 }
 
 export interface RouteFill {
@@ -32,6 +34,8 @@ export interface GatewayQuote {
   spender?: string | null
   /** Present for firm quotes only. */
   transaction?: { to: string; data: string; value: bigint; gas: bigint | null }
+  /** Platform fee already deducted from this quote, in sell-token base units. */
+  platformFee?: { bps: number; recipient: string; amount: bigint }
   /** Result of an eth_call of the transaction from the taker. Demotes failing quotes in ranking. */
   simulation?: 'ok' | 'failed' | 'skipped'
 }

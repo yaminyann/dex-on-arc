@@ -35,7 +35,10 @@ export default defineConfig({
     ],
   },
   build: {
+    // Lower peak memory on small build hosts (CI, Docker builds): no gzip size report, fewer parallel file reads.
+    reportCompressedSize: false,
     rollupOptions: {
+      maxParallelFileOps: 4,
       output: {
         // Split heavy, rarely-changing libraries so the app code stays small and browsers cache them separately.
         manualChunks(id: string) {

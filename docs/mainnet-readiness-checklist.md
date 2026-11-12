@@ -54,6 +54,18 @@ Legend: **Done** = verified by an automated or live test (evidence given). **Par
 | 3.8 | Indexer on durable storage | Partial | SQLite works; Postgres untested |
 | 3.9 | Multiple RPC providers with failover | Partial | Supported by configuration; not load tested |
 
+## 3b. Platform, admin and deployment
+
+| # | Item | Status | Evidence / gap |
+| --- | --- | --- | --- |
+| 3b.1 | Admin page shows only to the owner; every action is a contract call that reverts for others | Done (testnet) | Live: pause/resume and queue/cancel of a router change through the UI with the owner wallet; non-owner sees nothing |
+| 3b.2 | Platform swap fee cannot exceed 1% and fails closed | Done | Unit tests (invalid settings turn it off); live KyberSwap quote on Arc mainnet with a 0.30% fee |
+| 3b.3 | Platform swap fee with a real 0x key | **Open** | Implemented, never run against a live 0x key |
+| 3b.4 | Fee recipient is a multisig or cold wallet | **Owner** | A compromised backend could redirect fee revenue (not user funds) |
+| 3b.5 | Token list is a registry, not an endorsement | Partial | Filtered (whitelisted, no honeypot/fee-on-transfer) and sanitised; users can still hold risky tokens. Consider a curated list for launch |
+| 3b.6 | Docker Compose deployment on Coolify | Partial | Build and run verified locally on testnet; first Coolify deploy still to do. See [deployment-coolify.md](deployment-coolify.md) |
+| 3b.7 | `ADMIN_TOKEN`, keeper key and proxy hops configured for production | **Owner** | `scripts/coolify/preflight.ts` checks them |
+
 ## 4. Before any mainnet step
 
 1. Close the blockers: audit (1.1), oracle plan (1.11), fork test with real calldata (1.17).

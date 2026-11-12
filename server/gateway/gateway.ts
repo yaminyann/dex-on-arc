@@ -228,6 +228,7 @@ export function toWire(kind: QuoteKind, req: GatewayRequest, best: GatewayQuote,
     totalNetworkFee: best.networkFeeNative === null ? null : best.networkFeeNative.toString(),
     spender: best.spender ?? best.allowance?.spender ?? null,
     simulation: best.simulation,
+    platformFee: best.platformFee ? { bps: best.platformFee.bps, amount: best.platformFee.amount.toString() } : null,
     transaction:
       kind === 'quote' && best.transaction
         ? { to: best.transaction.to, data: best.transaction.data, value: best.transaction.value.toString(), gas: best.transaction.gas === null ? null : best.transaction.gas.toString() }

@@ -127,6 +127,12 @@ export function MarketForm({ ctx }: { ctx: TradeCtx }) {
               value={impliedVsOracle === null ? '-' : `${impliedVsOracle > 0 ? '+' : ''}${(impliedVsOracle * 100).toFixed(2)}%`}
               tone={impliedVsOracle !== null && Math.abs(impliedVsOracle) > 0.01 ? 'down' : undefined}
             />
+            {q.platformFee && (
+              <Row
+                label={`Platform fee (${(q.platformFee.bps / 100).toFixed(2)}%)`}
+                value={`${formatToken(q.platformFee.amount, sellToken.decimals, 6)} ${sellToken.symbol}`}
+              />
+            )}
             <Row label="Network fee" value={fee === null ? '-' : fee === 0n ? '< 0.000001 USDC' : `${formatToken(fee, 6, 6)} USDC`} />
             <Row
               label="Route"

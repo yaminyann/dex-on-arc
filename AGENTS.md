@@ -37,7 +37,10 @@ Non-custodial trading terminal on Arc: market swaps through a quote gateway (0x,
 - Trailing-stop peaks and stop-limit activation are only persisted by `pokeTrailing` and `activateStop`; a keeper must call them.
 - Execution reverts on failure (no failure counters) so griefers cannot brick orders.
 - Owner config changes (feeds, swap targets) are timelocked; disabling is instant; keeper fee can only be lowered.
-- Mainnet tokens in `src/trading/networks.ts` are intentionally empty until the user reviews mainnet config.
+- Mainnet `bases` in `src/trading/networks.ts` stay empty on purpose: the picker loads ~60 aggregator-routable tokens from `/api/tokens` (KyberSwap registry, filtered). Market swaps work for all; orders need an oracle feed on the contract.
+- Platform fee: market swaps only, via the aggregator's own fee params (`PLATFORM_FEE_BPS` max 100, `PLATFORM_FEE_RECIPIENT`); invalid settings turn it off. Order revenue is the keeper fee (lower-only). No contract change.
+- Admin page (`src/components/Admin.tsx`) is shown to the contract owner only; owner log comes from `/admin-events` (needs the indexer).
+- Deploy: `Dockerfile` (targets web, api), `docker-compose.yml`, `deploy/nginx.conf`, `scripts/coolify/{gen-env,preflight}.ts`. One api container only (keeper + indexer hold state).
 
 ## Scaling (off-chain only; contract unchanged)
 
